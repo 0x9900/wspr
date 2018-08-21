@@ -77,7 +77,7 @@ def azimuth(wspr_data):
     plt.polar(az, el, 'ro')
 
     plt.title('Distances & direction')
-    plt.savefig('azimuth.png')
+    plt.savefig('graphs/azimuth.png')
     plt.close()
 
 
@@ -90,7 +90,7 @@ def boxPlot(data):
 
     plt.title('Distances')
     plt.grid(linestyle='dotted')
-    plt.savefig('boxplot.png')
+    plt.savefig('graphs/boxplot.png')
     plt.close()
 
 def violinPlot(data):
@@ -106,7 +106,7 @@ def violinPlot(data):
 
     plt.title('Distances')
     plt.grid(linestyle='dotted')
-    plt.savefig('violin.png')
+    plt.savefig('graphs/violin.png')
     plt.close()
 
 def main():
