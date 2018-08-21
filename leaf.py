@@ -74,9 +74,14 @@ def azimuth(wspr_data):
         elements.append((azim, dist))
 
     az, el = zip(*elements)
-    plt.polar(az, el, 'ro')
 
-    plt.title('Distances & direction')
+    fig = plt.figure()
+    ax = fig.add_subplot(111, polar=True)
+    ax.set_theta_zero_location("N")
+    ax.set_theta_direction(-1)
+
+    ax.scatter(az, el)
+    ax.set_title('Azimuth\nDistance', loc='left')
     plt.savefig('graphs/azimuth.png')
     plt.close()
 
