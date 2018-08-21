@@ -1,51 +1,132 @@
 #!/usr/bin/env python
-
 """
-Stem and leaf plotting.
-http://en.wikipedia.org/wiki/Stem-and-leaf_display
+
+$ leaf.py --help
+usage: leaf.py [-h] [-s STEM_SIZE] filename
 
 """
 
 import argparse
 import collections
+import logging
 import math
+import os
 import sys
 
-def printStemPlot(values, stem_size):
-    """Prints a stem plot of the values."""
-    stem_size = 10 ** stem_size
-    stems = collections.defaultdict(list)
-    for v in values:
-        stems[v / stem_size].append(v % stem_size)
+from datetime import datetime
 
-    smin, smax = min(stems), max(stems)
-    try:
-        padding = "{:<%d}|" % int(math.log10(smax) + 2)
-    except ValueError:
-        padding = "{:<2}|"
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import requests
 
-    for key in range(smin, smax + 1):
-        print padding.format(key),
-        print ' '.join(str(leaf) for leaf in stems.get(key, []))
+logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s',
+                    datefmt='%H:%M:%S',
+                    level=logging.DEBUG)
 
+DXPLORER_CALL = os.getenv("CALLSIGN", "W6BSD")
+DXPLORER_KEY = os.getenv("KEY")
+DXPLORER_URL = "http://dxplorer.net/wspr/tx/spots.json"
+
+GRANULARITY = 5
+FIG_SIZE = (16, 6)
+
+class WsprData(object):
+    __slot__ = [
+        "distance", "tx_call", "timestamp", "drift", "tx_grid", "rx_call", "power_dbm",
+        "rx_grid", "azimuth", "snr", "freq",
+    ]
+
+    def __init__(self, *args, **kwargs):
+        for key, val, in kwargs.items():
+            if key == 'timestamp':
+                val = datetime.utcfromtimestamp(val)
+            setattr(self, key, val)
+
+def download():
+    params = dict(
+        callsign=DXPLORER_CALL,
+        key=DXPLORER_URL,
+        timelimit='1d',
+    )
+    resp = requests.get(url=DXPLORER_URL, params=params)
+    data = resp.json()
+    logging.info('Downloaded %d records', len(data))
+    return [WsprData(**d) for d in data]
+
+def reject_outliers(data, magnitude=1.2):
+    q25, q75 = np.percentile(data, [25, 75])
+    iqr = q75 - q25
+
+    min = q25 - (iqr * magnitude)
+    max = q75 + (iqr * magnitude)
+
+    return [x for x in data if min <= x <= max]
+
+def azimuth(wspr_data):
+    data = collections.defaultdict(set)
+    for node in wspr_data:
+      data[GRANULARITY * (node.azimuth / GRANULARITY)].add(node.distance)
+
+    elements = []
+    for azim, dists in data.iteritems():
+      for dist in reject_outliers(list(dists)):
+        elements.append((azim, dist))
+
+    az, el = zip(*elements)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, polar=True)
+    ax.set_theta_zero_location("N")
+    ax.set_theta_direction(-1)
+
+    ax.scatter(az, el)
+    ax.set_title('Azimuth\nDistance', loc='left')
+    plt.savefig('graphs/azimuth.png')
+    plt.close()
+
+
+def boxPlot(data):
+    # basic plot
+    print 'Drawing boxplot'
+    fig, ax = plt.subplots(figsize=FIG_SIZE)
+    ax.boxplot(data)
+    ax.grid(True)
+
+    plt.title('Distances')
+    plt.grid(linestyle='dotted')
+    plt.savefig('graphs/boxplot.png')
+    plt.close()
+
+def violinPlot(data):
+    print 'Drawing violinplot'
+    # get only the relevant data
+    values = []
+    for val in data:
+        values.append(reject_outliers(val))
+
+    fig, ax = plt.subplots(figsize=FIG_SIZE)
+    ax.violinplot(values, showmeans=False, showmedians=True)
+    ax.grid(True)
+
+    plt.title('Distances')
+    plt.grid(linestyle='dotted')
+    plt.savefig('graphs/violin.png')
+    plt.close()
 
 def main():
-    parser = argparse.ArgumentParser(description='Stem-and-leaf display.')
-    parser.add_argument('-s', '--stem_size', type=int, default=2,
-                        help='length of the stem [default: %(default)s]')
-    parser.add_argument('filename', help='File containing the values')
+    collection = collections.defaultdict(list)
 
-    args = parser.parse_args()
+    wspr_data = download()
+    for val in wspr_data:
+        key = val.timestamp.day * 100 + val.timestamp.hour
+        collection[key].append(val.distance)
 
-    try:
-        with open(args.filename, 'r') as fdi:
-            values = [int(n) for n in fdi]
-    except IOError as err:
-        print err
-        sys.exit(1)
+    values = [np.array(v[1]) for v in sorted(collection.items())]
 
-    values.sort()
-    printStemPlot(values, args.stem_size)
+    boxPlot(values)
+    violinPlot(values)
+    azimuth(wspr_data)
 
 if __name__ == "__main__":
     main()
