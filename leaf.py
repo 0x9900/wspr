@@ -28,6 +28,7 @@ DXPLORER_CALL = os.getenv("CALLSIGN", "W6BSD")
 DXPLORER_KEY = os.getenv("KEY")
 DXPLORER_URL = "http://dxplorer.net/wspr/tx/spots.json"
 
+GRANULARITY = 5
 FIG_SIZE = (16, 6)
 
 class WsprData(object):
@@ -48,9 +49,9 @@ def download():
         key=DXPLORER_URL,
         timelimit='1d',
     )
-    logging.info('Downloaded %d records', len(data))
     resp = requests.get(url=DXPLORER_URL, params=params)
     data = resp.json()
+    logging.info('Downloaded %d records', len(data))
     return [WsprData(**d) for d in data]
 
 def reject_outliers(data, magnitude=1.2):
@@ -62,8 +63,23 @@ def reject_outliers(data, magnitude=1.2):
 
     return [x for x in data if min <= x <= max]
 
-def azimuth(data):
-    pass
+def azimuth(wspr_data):
+    data = collections.defaultdict(set)
+    for node in wspr_data:
+      data[GRANULARITY * (node.azimuth / GRANULARITY)].add(node.distance)
+
+    elements = []
+    for azim, dists in data.iteritems():
+      for dist in reject_outliers(list(dists)):
+        elements.append((azim, dist))
+
+    az, el = zip(*elements)
+    plt.polar(az, el, 'ro')
+
+    plt.title('Distances & direction')
+    plt.savefig('azimuth.png')
+    plt.close()
+
 
 def boxPlot(data):
     # basic plot
@@ -105,6 +121,7 @@ def main():
 
     boxPlot(values)
     violinPlot(values)
+    azimuth(wspr_data)
 
 if __name__ == "__main__":
     main()
