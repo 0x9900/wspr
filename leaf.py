@@ -22,14 +22,18 @@ import requests
 
 logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s',
                     datefmt='%H:%M:%S',
-                    level=logging.DEBUG)
+                    level=logging.INFO)
 
 DXPLORER_CALL = os.getenv("CALLSIGN", "W6BSD")
 DXPLORER_KEY = os.getenv("KEY")
 DXPLORER_URL = "http://dxplorer.net/wspr/tx/spots.json"
 
-GRANULARITY = 5
-FIG_SIZE = (16, 6)
+class Config(object):
+  target = '/tmp'
+  granularity = 5
+  fig_size = (16, 6)
+  timelimit = '1d'
+
 
 class WsprData(object):
     __slot__ = [
@@ -43,11 +47,12 @@ class WsprData(object):
                 val = datetime.utcfromtimestamp(val)
             setattr(self, key, val)
 
+
 def download():
     params = dict(
         callsign=DXPLORER_CALL,
         key=DXPLORER_URL,
-        timelimit='1d',
+        timelimit=Config.timelimit,
     )
     resp = requests.get(url=DXPLORER_URL, params=params)
     data = resp.json()
@@ -64,9 +69,12 @@ def reject_outliers(data, magnitude=1.2):
     return [x for x in data if min <= x <= max]
 
 def azimuth(wspr_data):
+    filename = os.path.join(Config.target, 'azimuth.png')
+    logging.info('Drawing azimuth to %s', filename)
     data = collections.defaultdict(set)
     for node in wspr_data:
-      data[GRANULARITY * (node.azimuth / GRANULARITY)].add(node.distance)
+      key = Config.granularity * (node.azimuth / Config.granularity)
+      data[key].add(node.distance)
 
     elements = []
     for azim, dists in data.iteritems():
@@ -82,39 +90,54 @@ def azimuth(wspr_data):
 
     ax.scatter(az, el)
     ax.set_title('Azimuth\nDistance', loc='left')
-    plt.savefig('graphs/azimuth.png')
+    plt.savefig(filename)
     plt.close()
 
 
 def boxPlot(data):
     # basic plot
-    print 'Drawing boxplot'
-    fig, ax = plt.subplots(figsize=FIG_SIZE)
+    filename = os.path.join(Config.target, 'boxplot.png')
+    logging.info('Drawing boxplot to %s', filename)
+    fig, ax = plt.subplots(figsize=Config.fig_size)
     ax.boxplot(data)
     ax.grid(True)
 
     plt.title('Distances')
     plt.grid(linestyle='dotted')
-    plt.savefig('graphs/boxplot.png')
+    plt.savefig(filename)
     plt.close()
 
 def violinPlot(data):
-    print 'Drawing violinplot'
+    filename = os.path.join(Config.target, 'violin.png')
+    logging.info('Drawing violin to %s', filename)
     # get only the relevant data
     values = []
     for val in data:
         values.append(reject_outliers(val))
 
-    fig, ax = plt.subplots(figsize=FIG_SIZE)
+    fig, ax = plt.subplots(figsize=Config.fig_size)
     ax.violinplot(values, showmeans=False, showmedians=True)
     ax.grid(True)
 
     plt.title('Distances')
     plt.grid(linestyle='dotted')
-    plt.savefig('graphs/violin.png')
+    plt.savefig(filename)
     plt.close()
 
 def main():
+    parser = argparse.ArgumentParser(description='WSPR Stats.')
+    parser.add_argument('-d', '--debug', action='store_true', default=False,
+                        help='Print information useful for debugging')
+    parser.add_argument('-t', '--target-dir', default='/tmp',
+                        help=('Target directory where the images will be '
+                              'saved [default: %(default)s]'))
+    args = parser.parse_args()
+    Config.target = args.target_dir
+    if args.debug:
+      _logger = logging.getLogger()
+      _logger.setLevel('DEBUG')
+      del _logger
+
     collection = collections.defaultdict(list)
 
     wspr_data = download()
