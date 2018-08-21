@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 """
 
-$ leaf.py --help
-usage: leaf.py [-h] [-s STEM_SIZE] filename
+To read leaf.py you need to install the following packages:
+- matplotlib
+- numpy
+- requests
 
 """
 
@@ -17,7 +19,6 @@ from datetime import datetime
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 import requests
 
 logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s',
