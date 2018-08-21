@@ -10,6 +10,21 @@ central database called WSPRnet. This program downloads the data of
 these transmission reports create several graphs useful to analyze how
 propagation works or to optimize your antenna setting.
 
+## Usage
+
+    wspr[523]$ ./leaf.py --help
+    usage: leaf.py [-h] [-d] [-t TARGET_DIR] [-f FILE]
+
+    WSPR Stats.
+
+    optional arguments:
+      -h, --help            show this help message and exit
+      -d, --debug           Print information useful for debugging
+      -t TARGET_DIR, --target-dir TARGET_DIR
+                            Target directory where the images will be saved
+                            [default: /tmp]
+      -f FILE, --file FILE  JSON file from DXPlorer.net
+
 ## Output example
 
 The following boxplot graph show for each day at what distance the

@@ -17,6 +17,7 @@ import sys
 
 from datetime import datetime
 
+import json
 import matplotlib.pyplot as plt
 import numpy as np
 import requests
@@ -48,6 +49,16 @@ class WsprData(object):
                 val = datetime.utcfromtimestamp(val)
             setattr(self, key, val)
 
+
+def readfile(filename):
+    try:
+      with open(filename, 'rb') as fdi:
+        data = json.load(fdi)
+    except (ValueError, IOError) as err:
+      logging.error(err)
+      sys.exit(os.EX_OSFILE)
+
+    return [WsprData(**d) for d in data]
 
 def download():
     params = dict(
@@ -132,16 +143,20 @@ def main():
     parser.add_argument('-t', '--target-dir', default='/tmp',
                         help=('Target directory where the images will be '
                               'saved [default: %(default)s]'))
-    args = parser.parse_args()
-    Config.target = args.target_dir
-    if args.debug:
+    parser.add_argument('-f', '--file', help='JSON file from DXPlorer.net')
+    pargs = parser.parse_args()
+    Config.target = pargs.target_dir
+    if pargs.debug:
       _logger = logging.getLogger()
       _logger.setLevel('DEBUG')
       del _logger
 
-    collection = collections.defaultdict(list)
+    if pargs.file:
+      wspr_data = readfile(pargs.file)
+    else:
+      wspr_data = download()
 
-    wspr_data = download()
+    collection = collections.defaultdict(list)
     for val in wspr_data:
         key = val.timestamp.day * 100 + val.timestamp.hour
         collection[key].append(val.distance)
