@@ -27,8 +27,7 @@ logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s',
                     datefmt='%H:%M:%S',
                     level=logging.INFO)
 
-DXPLORER_CALL = os.getenv("CALLSIGN", "W6BSD")
-DXPLORER_KEY = os.getenv("KEY")
+
 DXPLORER_URL = "http://dxplorer.net/wspr/tx/spots.json"
 
 class Config(object):
@@ -36,7 +35,8 @@ class Config(object):
   granularity = 5
   fig_size = (16, 6)
   timelimit = '1d'
-
+  callsign = os.getenv("CALLSIGN", '').upper()
+  key = os.getenv("KEY")
 
 class WsprData(object):
   __slot__ = [
@@ -61,12 +61,15 @@ def readfile(filename):
 
 def download():
   params = dict(
-    callsign=DXPLORER_CALL,
-    key=DXPLORER_URL,
+    callsign=Config.callsign,
+    key=Config.key,
     timelimit=Config.timelimit,
   )
   resp = requests.get(url=DXPLORER_URL, params=params)
   data = resp.json()
+  if 'Error' in data:
+    logging.error(data['Error'])
+    sys.exit(os.EX_OSFILE)
   logging.info('Downloaded %d records', len(data))
   return [WsprData(**d) for d in data]
 
@@ -101,7 +104,7 @@ def azimuth(wspr_data):
   ax.set_theta_direction(-1)
 
   ax.scatter(az, el)
-  ax.set_title('Azimuth\nDistance', loc='left')
+  ax.set_title('[{}] Azimuth\nDistance'.format(Config.callsign), loc='left')
   plt.savefig(filename)
   plt.close()
 
@@ -128,9 +131,9 @@ def boxPlot(wspr_data):
     patch.set_color('lightblue')
 
   ax.grid(True)
-  ax.set_xticklabels(['{}'.format(h.strftime('%d %R')) for h in hours])
+  ax.set_xticklabels(['{}'.format(h.strftime('%R')) for h in hours])
 
-  plt.title('Distances')
+  plt.title('[{}] Distances'.format(Config.callsign))
   plt.grid(linestyle='dotted')
   plt.savefig(filename)
   plt.close()
@@ -156,7 +159,7 @@ def violinPlot(wspr_data):
 
   ax.violinplot(values, showmeans=False, showmedians=True)
 
-  plt.title('Distances')
+  plt.title('[{}] Distances'.format(Config.callsign))
   plt.grid(linestyle='dotted')
   plt.savefig(filename)
   plt.close()
@@ -175,6 +178,10 @@ def main():
     _logger = logging.getLogger()
     _logger.setLevel('DEBUG')
     del _logger
+
+  if not pargs.file and not any([Config.callsign, Config.key]):
+    logging.error('Call sign or key missing')
+    sys.exit(os.EX_NOPERM)
 
   if pargs.file:
     wspr_data = readfile(pargs.file)

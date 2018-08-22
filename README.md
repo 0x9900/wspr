@@ -12,7 +12,20 @@ propagation works or to optimize your antenna setting.
 
 ## Usage
 
-    wspr[523]$ ./leaf.py --help
+To use this program you need to send wspr data to wsprnet.org. This is
+done with either a wsprlite (see down the page) or using the software
+WSJT-X. Then you need to get your key from dxplorer.net.
+
+Set the environment variables `CALLSIGN` and `KEY` with your call and
+key. The just run the program. The program without any argument will
+download from DXplorer your last 24 hours data and graph the
+results. You can also call `leaf.py` with the argument `--file`. The
+file needs to be a JSON file with the same format as the file provided
+by the site DXplorer.
+
+    wspr$ export CALLSIGN="W6BSD"
+	wspr$ export KEY="xxxxxSECRET_KEYxxxxx"
+	wspr$ ./leaf.py --help
     usage: leaf.py [-h] [-d] [-t TARGET_DIR] [-f FILE]
 
     WSPR Stats.
