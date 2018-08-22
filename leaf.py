@@ -73,7 +73,7 @@ def download():
   logging.info('Downloaded %d records', len(data))
   return [WsprData(**d) for d in data]
 
-def reject_outliers(data, magnitude=1.2):
+def reject_outliers(data, magnitude=1.5):
   q25, q75 = np.percentile(data, [25, 75])
   iqr = q75 - q25
 
