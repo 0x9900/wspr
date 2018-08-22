@@ -126,12 +126,11 @@ def boxPlot(wspr_data):
   fig, ax = plt.subplots(figsize=Config.fig_size)
   bplot = ax.boxplot(values, sym="b.", patch_artist=True)
   for patch in bplot['boxes']:
-    patch.set(color='b', linewidth=1)
-
-    patch.set_color('lightblue')
+    patch.set(color='lightblue', linewidth=1)
 
   ax.grid(True)
   ax.set_xticklabels(['{}'.format(h.strftime('%R')) for h in hours])
+  ax.set_ylabel('Km')
 
   plt.title('[{}] Distances'.format(Config.callsign))
   plt.grid(linestyle='dotted')
@@ -156,6 +155,7 @@ def violinPlot(wspr_data):
   fig, ax = plt.subplots(figsize=Config.fig_size)
   ax.grid(True)
   ax.set_xticklabels(['{}'.format(h.strftime('%d %R')) for h in hours])
+  ax.set_ylabel('Km')
 
   ax.violinplot(values, showmeans=False, showmedians=True)
 
