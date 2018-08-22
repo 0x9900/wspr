@@ -34,7 +34,7 @@ class Config(object):
   target = '/tmp'
   granularity = 5
   fig_size = (16, 6)
-  timelimit = '1d'
+  timelimit = '28h'
   callsign = os.getenv("CALLSIGN", '').upper()
   key = os.getenv("KEY")
 
@@ -99,12 +99,13 @@ def azimuth(wspr_data):
   az, el = zip(*elements)
 
   fig = plt.figure()
+  fig.text(0, 0, 'http://github.com/0x9900/wspr')
+  fig.suptitle('[{}] Azimuth x Distance'.format(Config.callsign),  fontsize=14, fontweight='bold')
   ax = fig.add_subplot(111, polar=True)
   ax.set_theta_zero_location("N")
   ax.set_theta_direction(-1)
 
   ax.scatter(az, el)
-  ax.set_title('[{}] Azimuth\nDistance'.format(Config.callsign), loc='left')
   plt.savefig(filename)
   plt.close()
 
@@ -124,6 +125,9 @@ def boxPlot(wspr_data):
 
   hours, values = zip(*data)
   fig, ax = plt.subplots(figsize=Config.fig_size)
+  fig.text(0, 0, 'http://github.com/0x9900/wspr')
+  fig.suptitle('[{}] Distances'.format(Config.callsign),  fontsize=14, fontweight='bold')
+
   bplot = ax.boxplot(values, sym="b.", patch_artist=True)
   for patch in bplot['boxes']:
     patch.set(color='lightblue', linewidth=1)
@@ -132,7 +136,6 @@ def boxPlot(wspr_data):
   ax.set_xticklabels(['{}'.format(h.strftime('%R')) for h in hours])
   ax.set_ylabel('Km')
 
-  plt.title('[{}] Distances'.format(Config.callsign))
   plt.grid(linestyle='dotted')
   plt.savefig(filename)
   plt.close()
@@ -153,13 +156,15 @@ def violinPlot(wspr_data):
 
   hours, values = zip(*data)
   fig, ax = plt.subplots(figsize=Config.fig_size)
+  fig.text(0, 0, 'http://github.com/0x9900/wspr')
+
+  fig.suptitle('[{}] Distances'.format(Config.callsign),  fontsize=14, fontweight='bold')
   ax.grid(True)
   ax.set_xticklabels(['{}'.format(h.strftime('%d %R')) for h in hours])
   ax.set_ylabel('Km')
 
   ax.violinplot(values, showmeans=False, showmedians=True)
 
-  plt.title('[{}] Distances'.format(Config.callsign))
   plt.grid(linestyle='dotted')
   plt.savefig(filename)
   plt.close()
