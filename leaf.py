@@ -99,7 +99,7 @@ def azimuth(wspr_data):
   az, el = zip(*elements)
 
   fig = plt.figure()
-  fig.text(0, 0, 'http://github.com/0x9900/wspr')
+  fig.text(.01, .02, 'http://github.com/0x9900/wspr')
   fig.suptitle('[{}] Azimuth x Distance'.format(Config.callsign),  fontsize=14, fontweight='bold')
   ax = fig.add_subplot(111, polar=True)
   ax.set_theta_zero_location("N")
@@ -125,7 +125,7 @@ def boxPlot(wspr_data):
 
   hours, values = zip(*data)
   fig, ax = plt.subplots(figsize=Config.fig_size)
-  fig.text(0, 0, 'http://github.com/0x9900/wspr')
+  fig.text(0.01, 0.02, 'http://github.com/0x9900/wspr')
   fig.suptitle('[{}] Distances'.format(Config.callsign),  fontsize=14, fontweight='bold')
 
   bplot = ax.boxplot(values, sym="b.", patch_artist=True)
@@ -156,7 +156,7 @@ def violinPlot(wspr_data):
 
   hours, values = zip(*data)
   fig, ax = plt.subplots(figsize=Config.fig_size)
-  fig.text(0, 0, 'http://github.com/0x9900/wspr')
+  fig.text(.01, .02, 'http://github.com/0x9900/wspr')
 
   fig.suptitle('[{}] Distances'.format(Config.callsign),  fontsize=14, fontweight='bold')
   ax.grid(True)
