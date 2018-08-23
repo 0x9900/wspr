@@ -197,7 +197,7 @@ def contactMap(wspr_data):
 
   fig, ax = plt.subplots(figsize=(14, 10))
   fig.text(0.01, 0.02, 'http://github/com/0x9900/wspr')
-  fig.suptitle('[{}] Heatmap'.format(Config.callsign), fontsize=14, fontweight='bold')
+  fig.suptitle('[{}] Contact Map'.format(Config.callsign), fontsize=14, fontweight='bold')
 
   slon, slat = grid2latlong(wspr_data[0].tx_grid)
 
