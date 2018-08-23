@@ -23,6 +23,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import requests
 
+from mpl_toolkits.basemap import Basemap
+
 logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s',
                     datefmt='%H:%M:%S',
                     level=logging.INFO)
@@ -48,6 +50,24 @@ class WsprData(object):
     for key, val, in kwargs.items():
       setattr(self, key, val)
 
+def grid2latlong(maiden):
+    """
+    Transform a maidenhead grid locator to latitude & longitude
+    """
+    maiden = maiden.strip().upper()
+    assert len(maiden) in [2, 4, 6, 8], 'Locator length error: 2, 4, 6 or 8 characters accepted'
+    charA = ord('A')
+
+    multipliers = [20, 10, 2, 1, 5./60, 2.5/60, 5./600, 2.5/600]
+    maiden = [ord(n) - charA if n >= 'A' else int(n) for n in maiden]
+    lon = -180.
+    lat = -90.
+    for idx in range(0, len(maiden), 2):
+        lon += maiden[idx] * multipliers[idx]
+    for idx in range(1, len(maiden), 2):
+        lat += maiden[idx] * multipliers[idx]
+
+    return lon, lat
 
 def readfile(filename):
   try:
@@ -169,6 +189,27 @@ def violinPlot(wspr_data):
   plt.savefig(filename)
   plt.close()
 
+def contactMap(wspr_data):
+  filename = os.path.join(Config.target, 'heatmap.png')
+  logging.info('Drawing heatmap to %s', filename)
+
+  fig, ax = plt.subplots(figsize=(14, 10))
+  fig.text(0.01, 0.02, 'http://github/com/0x9900/wspr')
+  fig.suptitle('[{}] Heatmap'.format(Config.callsign), fontsize=14, fontweight='bold')
+
+  m = Basemap(llcrnrlon=-180.,llcrnrlat=-70.,urcrnrlon=180.,urcrnrlat=85.,
+              rsphere=(6378137.00,6356752.3142),
+              resolution='l',projection='merc',
+              lat_0=0., lon_0=-180., lat_ts=80.)
+  m.fillcontinents()
+  # draw great circle route between NY and London
+  for data in wspr_data:
+     slon, slat = grid2latlong(data.tx_grid)
+     dlon, dlat = grid2latlong(data.rx_grid)
+     m.drawgreatcircle(slon, slat, dlon, dlat,linewidth=1, color='r')
+  plt.savefig(filename)
+  plt.close()
+
 def main():
   parser = argparse.ArgumentParser(description='WSPR Stats.')
   parser.add_argument('-d', '--debug', action='store_true', default=False,
@@ -196,6 +237,7 @@ def main():
   boxPlot(wspr_data)
   violinPlot(wspr_data)
   azimuth(wspr_data)
+  contactMap(wspr_data)
 
 if __name__ == "__main__":
   main()
