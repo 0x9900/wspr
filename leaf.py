@@ -192,8 +192,8 @@ def violinPlot(wspr_data):
   plt.close()
 
 def contactMap(wspr_data):
-  filename = os.path.join(Config.target, 'heatmap.png')
-  logging.info('Drawing heatmap to %s', filename)
+  filename = os.path.join(Config.target, 'contactmap.png')
+  logging.info('Drawing connection map to %s', filename)
 
   fig, ax = plt.subplots(figsize=(14, 10))
   fig.text(0.01, 0.02, 'http://github/com/0x9900/wspr')

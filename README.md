@@ -56,6 +56,10 @@ been heard more in a specific direction.
 
 ![Azimuth](graphs/azimuth.png)
 
+Contact map.
+
+![ContactMap](graphs/contactmap.png)
+
 ## WSPRLite
 
 The WSPRlite is a special test transmitter that sends a signal to a
