@@ -23,10 +23,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 import requests
 
+try:
+    from mpl_toolkits.basemap import Basemap
+except ImportError:
+    Basemap = None
+
 logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s',
                     datefmt='%H:%M:%S',
                     level=logging.INFO)
-
 
 DXPLORER_URL = "http://dxplorer.net/wspr/tx/spots.json"
 
@@ -48,6 +52,24 @@ class WsprData(object):
     for key, val, in kwargs.items():
       setattr(self, key, val)
 
+def grid2latlong(maiden):
+    """
+    Transform a maidenhead grid locator to latitude & longitude
+    """
+    maiden = maiden.strip().upper()
+    assert len(maiden) in [2, 4, 6, 8], 'Locator length error: 2, 4, 6 or 8 characters accepted'
+    charA = ord('A')
+
+    multipliers = [20, 10, 2, 1, 5./60, 2.5/60, 5./600, 2.5/600]
+    maiden = [ord(n) - charA if n >= 'A' else int(n) for n in maiden]
+    lon = -180.
+    lat = -90.
+    for idx in range(0, len(maiden), 2):
+        lon += maiden[idx] * multipliers[idx]
+    for idx in range(1, len(maiden), 2):
+        lat += maiden[idx] * multipliers[idx]
+
+    return lon, lat
 
 def readfile(filename):
   try:
@@ -169,6 +191,34 @@ def violinPlot(wspr_data):
   plt.savefig(filename)
   plt.close()
 
+def contactMap(wspr_data):
+  filename = os.path.join(Config.target, 'heatmap.png')
+  logging.info('Drawing heatmap to %s', filename)
+
+  fig, ax = plt.subplots(figsize=(14, 10))
+  fig.text(0.01, 0.02, 'http://github/com/0x9900/wspr')
+  fig.suptitle('[{}] Heatmap'.format(Config.callsign), fontsize=14, fontweight='bold')
+
+  slon, slat = grid2latlong(wspr_data[0].tx_grid)
+
+  logging.info("lat: %f / lon: %f", slat, slon)
+  map = Basemap(projection='cyl', lon_0=slon, resolution='c')
+  map.fillcontinents(color='linen', lake_color='aqua')
+  map.drawcoastlines()
+  map.drawmapboundary(fill_color='aqua')
+  map.drawparallels(np.arange(-90.,90.,30.))
+  map.drawmeridians(np.arange(-180.,180.,60.))
+
+  # draw great circle route between NY and London
+  for data in wspr_data:
+    slon, slat = grid2latlong(data.tx_grid)
+    dlon, dlat = grid2latlong(data.rx_grid)
+    map.drawgreatcircle(slon, slat, dlon, dlat, linewidth=.5, color='g')
+    x, y = map(dlon, dlat)
+    map.plot(x, y, 'go', markersize=3, alpha=.5)
+  plt.savefig(filename)
+  plt.close()
+
 def main():
   parser = argparse.ArgumentParser(description='WSPR Stats.')
   parser.add_argument('-d', '--debug', action='store_true', default=False,
@@ -196,6 +246,11 @@ def main():
   boxPlot(wspr_data)
   violinPlot(wspr_data)
   azimuth(wspr_data)
+
+  if Basemap:
+    contactMap(wspr_data)
+  else:
+    logging.warning('Install maptplotlib.Basemap to generate the maps')
 
 if __name__ == "__main__":
   main()
