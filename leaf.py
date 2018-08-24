@@ -111,12 +111,12 @@ def azimuth(wspr_data):
   data = collections.defaultdict(set)
   for node in wspr_data:
     key = Config.granularity * (node.azimuth / Config.granularity)
-    data[key].add(node.distance)
+    data[key].add(node.distance, 200 * np.power(10, node.snr))
 
   elements = []
-  for azim, dists in data.iteritems():
-    for dist in reject_outliers(list(dists)):
-      elements.append((azim, dist))
+  for azim, dval in data.iteritems():
+    for dist, snr in dval:
+       elements.append((azim * (np.pi / 180), dist, ))
 
   az, el = zip(*elements)
 
@@ -250,7 +250,7 @@ def main():
   if Basemap:
     contactMap(wspr_data)
   else:
-    logging.warning('Install maptplotlib.Basemap to generate the maps')
+    logging.warning('Install matplotlib.Basemap to generate the maps')
 
 if __name__ == "__main__":
   main()

@@ -1,5 +1,7 @@
+.DS_Store
 *~
 *.pyc
 /pexec.egg-info/
 /build/
 /dist/
+scratch_pad.py
