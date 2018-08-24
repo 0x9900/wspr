@@ -10,6 +10,10 @@ central database called WSPRnet. This program downloads the data of
 these transmission reports create several graphs useful to analyze how
 propagation works or to optimize your antenna setting.
 
+## Dependencies
+
+This program depends on the following Python packages: `matplotlib`, `numpy`, `requests`. You can also optionally install `mpl_tookints`, if you want to display maps.
+
 ## Usage
 
 To use this program you need to send wspr data to wsprnet.org. This is
@@ -24,8 +28,8 @@ file needs to be a JSON file with the same format as the file provided
 by the site DXplorer.
 
     wspr$ export CALLSIGN="W6BSD"
-	wspr$ export KEY="xxxxxSECRET_KEYxxxxx"
-	wspr$ ./leaf.py --help
+  	wspr$ export KEY="xxxxxSECRET_KEYxxxxx"
+  	wspr$ ./leaf.py --help
     usage: leaf.py [-h] [-d] [-t TARGET_DIR] [-f FILE]
 
     WSPR Stats.
