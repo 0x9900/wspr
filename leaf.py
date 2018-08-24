@@ -39,7 +39,6 @@ class Config(object):
   granularity = 5
   fig_size = (16, 6)
   timelimit = '28h'
-  grid = 'CM87VL'
   callsign = os.getenv("CALLSIGN", '').upper()
   key = os.getenv("KEY")
 
@@ -70,7 +69,7 @@ def grid2latlong(maiden):
     for idx in range(1, len(maiden), 2):
         lat += maiden[idx] * multipliers[idx]
 
-    return lat, lon
+    return lon, lat
 
 def readfile(filename):
   try:
@@ -112,12 +111,12 @@ def azimuth(wspr_data):
   data = collections.defaultdict(set)
   for node in wspr_data:
     key = Config.granularity * (node.azimuth / Config.granularity)
-    data[key].add(node.distance, 200 * np.power(10, node.snr))
+    data[key].add(node.distance)
 
   elements = []
-  for azim, dval in data.iteritems():
-    for dist, snr in dval:
-       elements.append((azim * (np.pi / 180), dist, ))
+  for azim, dists in data.iteritems():
+    for dist in reject_outliers(list(dists)):
+      elements.append((azim, dist))
 
   az, el = zip(*elements)
 
@@ -200,7 +199,8 @@ def contactMap(wspr_data):
   fig.text(0.01, 0.02, 'http://github/com/0x9900/wspr')
   fig.suptitle('[{}] Contact Map'.format(Config.callsign), fontsize=14, fontweight='bold')
 
-  slat, slon = grid2latlong(Config.grid)
+  slon, slat = grid2latlong(wspr_data[0].tx_grid)
+
   logging.info("lat: %f / lon: %f", slat, slon)
   map = Basemap(projection='cyl', lon_0=slon, resolution='c')
   map.fillcontinents(color='linen', lake_color='aqua')
@@ -211,8 +211,8 @@ def contactMap(wspr_data):
 
   # draw great circle route between NY and London
   for data in wspr_data:
-    slat, slon = grid2latlong(data.tx_grid)
-    dlat, dlon = grid2latlong(data.rx_grid)
+    slon, slat = grid2latlong(data.tx_grid)
+    dlon, dlat = grid2latlong(data.rx_grid)
     map.drawgreatcircle(slon, slat, dlon, dlat, linewidth=.5, color='g')
     x, y = map(dlon, dlat)
     map.plot(x, y, 'go', markersize=3, alpha=.5)
