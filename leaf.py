@@ -39,6 +39,7 @@ class Config(object):
   granularity = 5
   fig_size = (16, 6)
   timelimit = '28h'
+  grid = 'CM87VL'
   callsign = os.getenv("CALLSIGN", '').upper()
   key = os.getenv("KEY")
 
@@ -69,7 +70,7 @@ def grid2latlong(maiden):
     for idx in range(1, len(maiden), 2):
         lat += maiden[idx] * multipliers[idx]
 
-    return lon, lat
+    return lat, lon
 
 def readfile(filename):
   try:
@@ -199,8 +200,7 @@ def contactMap(wspr_data):
   fig.text(0.01, 0.02, 'http://github/com/0x9900/wspr')
   fig.suptitle('[{}] Contact Map'.format(Config.callsign), fontsize=14, fontweight='bold')
 
-  slon, slat = grid2latlong(wspr_data[0].tx_grid)
-
+  slat, slon = grid2latlong(Config.grid)
   logging.info("lat: %f / lon: %f", slat, slon)
   map = Basemap(projection='cyl', lon_0=slon, resolution='c')
   map.fillcontinents(color='linen', lake_color='aqua')
@@ -211,8 +211,8 @@ def contactMap(wspr_data):
 
   # draw great circle route between NY and London
   for data in wspr_data:
-    slon, slat = grid2latlong(data.tx_grid)
-    dlon, dlat = grid2latlong(data.rx_grid)
+    slat, slon = grid2latlong(data.tx_grid)
+    dlat, dlon = grid2latlong(data.rx_grid)
     map.drawgreatcircle(slon, slat, dlon, dlat, linewidth=.5, color='g')
     x, y = map(dlon, dlat)
     map.plot(x, y, 'go', markersize=3, alpha=.5)
