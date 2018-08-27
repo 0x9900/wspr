@@ -152,7 +152,7 @@ def distPlot(wspr_data):
     data[key].append(float(val.distance))
 
   _, values = zip(*sorted(data.items()))
-  values = smooth([np.percentile(v, 75, interpolation='midpoint') for v in values], 7)
+  values = smooth([np.percentile(v, 90, interpolation='midpoint') for v in values], 7)
 
   fig, ax = plt.subplots(figsize=Config.fig_size)
   fig.text(0.01, 0.02, 'http://github.com/0x9900/wspr')
