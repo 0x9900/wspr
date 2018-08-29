@@ -11,12 +11,10 @@ To read leaf.py you need to install the following packages:
 import argparse
 import collections
 import logging
-import math
 import os
 import sys
 
 from datetime import datetime
-from functools import partial
 
 import json
 import matplotlib.pyplot as plt
@@ -24,9 +22,9 @@ import numpy as np
 import requests
 
 try:
-    from mpl_toolkits.basemap import Basemap
+  from mpl_toolkits.basemap import Basemap
 except ImportError:
-    Basemap = None
+  Basemap = None
 
 logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s',
                     datefmt='%H:%M:%S',
@@ -35,6 +33,7 @@ logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s',
 DXPLORER_URL = "http://dxplorer.net/wspr/tx/spots.json"
 
 class Config(object):
+  # pylint: disable=too-few-public-methods
   target = '/tmp'
   granularity = 5
   fig_size = (16, 6)
@@ -43,33 +42,32 @@ class Config(object):
   key = os.getenv("KEY")
 
 class WsprData(object):
-  __slot__ = [
-    "distance", "tx_call", "timestamp", "drift", "tx_grid", "rx_call", "power_dbm",
-    "rx_grid", "azimuth", "snr", "freq",
-  ]
+  # pylint: disable=too-few-public-methods
+  __slot__ = ["distance", "tx_call", "timestamp", "drift", "tx_grid", "rx_call", "power_dbm",
+              "rx_grid", "azimuth", "snr", "freq"]
 
-  def __init__(self, *args, **kwargs):
+  def __init__(self, *_, **kwargs):
     for key, val, in kwargs.items():
       setattr(self, key, val)
 
 def grid2latlong(maiden):
-    """
-    Transform a maidenhead grid locator to latitude & longitude
-    """
-    maiden = maiden.strip().upper()
-    assert len(maiden) in [2, 4, 6, 8], 'Locator length error: 2, 4, 6 or 8 characters accepted'
-    charA = ord('A')
+  """
+  Transform a maidenhead grid locator to latitude & longitude
+  """
+  maiden = maiden.strip().upper()
+  assert len(maiden) in [2, 4, 6, 8], 'Locator length error: 2, 4, 6 or 8 char_acters accepted'
+  char_a = ord('A')
 
-    multipliers = [20, 10, 2, 1, 5./60, 2.5/60, 5./600, 2.5/600]
-    maiden = [ord(n) - charA if n >= 'A' else int(n) for n in maiden]
-    lon = -180.
-    lat = -90.
-    for idx in range(0, len(maiden), 2):
-        lon += maiden[idx] * multipliers[idx]
-    for idx in range(1, len(maiden), 2):
-        lat += maiden[idx] * multipliers[idx]
+  multipliers = [20, 10, 2, 1, 5./60, 2.5/60, 5./600, 2.5/600]
+  maiden = [ord(n) - char_a if n >= 'A' else int(n) for n in maiden]
+  lon = -180.
+  lat = -90.
+  for idx in range(0, len(maiden), 2):
+    lon += maiden[idx] * multipliers[idx]
+  for idx in range(1, len(maiden), 2):
+    lat += maiden[idx] * multipliers[idx]
 
-    return lon, lat
+  return lon, lat
 
 def readfile(filename):
   try:
@@ -82,11 +80,9 @@ def readfile(filename):
   return [WsprData(**d) for d in data]
 
 def download():
-  params = dict(
-    callsign=Config.callsign,
-    key=Config.key,
-    timelimit=Config.timelimit,
-  )
+  params = dict(callsign=Config.callsign,
+                key=Config.key,
+                timelimit=Config.timelimit)
   resp = requests.get(url=DXPLORER_URL, params=params)
   data = resp.json()
   if 'Error' in data:
@@ -99,10 +95,10 @@ def reject_outliers(data, magnitude=1.5):
   q25, q75 = np.percentile(data, [25, 75])
   iqr = q75 - q25
 
-  min = q25 - (iqr * magnitude)
-  max = q75 + (iqr * magnitude)
+  qmin = q25 - (iqr * magnitude)
+  qmax = q75 + (iqr * magnitude)
 
-  return [x for x in data if min <= x <= max]
+  return [x for x in data if qmin <= x <= qmax]
 
 def azimuth(wspr_data):
   filename = os.path.join(Config.target, 'azimuth.png')
@@ -118,20 +114,20 @@ def azimuth(wspr_data):
     for dist in reject_outliers(list(dists)):
       elements.append((azim, dist))
 
-  az, el = zip(*elements)
+  azim, elems = zip(*elements)
 
   fig = plt.figure()
   fig.text(.01, .02, 'http://github.com/0x9900/wspr')
-  fig.suptitle('[{}] Azimuth x Distance'.format(Config.callsign),  fontsize=14, fontweight='bold')
-  ax = fig.add_subplot(111, polar=True)
-  ax.set_theta_zero_location("N")
-  ax.set_theta_direction(-1)
+  fig.suptitle('[{}] Azimuth x Distance'.format(Config.callsign), fontsize=14, fontweight='bold')
+  ax_ = fig.add_subplot(111, polar=True)
+  ax_.set_theta_zero_location("N")
+  ax_.set_theta_direction(-1)
 
-  ax.scatter(az, el)
+  ax_.scatter(azim, elems)
   plt.savefig(filename)
   plt.close()
 
-def boxPlot(wspr_data):
+def box_plot(wspr_data):
   # basic plot
   filename = os.path.join(Config.target, 'boxplot.png')
   logging.info('Drawing boxplot to %s', filename)
@@ -146,23 +142,23 @@ def boxPlot(wspr_data):
     data.append((datetime.utcfromtimestamp(key), values))
 
   hours, values = zip(*data)
-  fig, ax = plt.subplots(figsize=Config.fig_size)
+  fig, ax_ = plt.subplots(figsize=Config.fig_size)
   fig.text(0.01, 0.02, 'http://github.com/0x9900/wspr')
-  fig.suptitle('[{}] Distances'.format(Config.callsign),  fontsize=14, fontweight='bold')
+  fig.suptitle('[{}] Distances'.format(Config.callsign), fontsize=14, fontweight='bold')
 
-  bplot = ax.boxplot(values, sym="b.", patch_artist=True)
+  bplot = ax_.boxplot(values, sym="b.", patch_artist=True)
   for patch in bplot['boxes']:
     patch.set(color='lightblue', linewidth=1)
 
-  ax.grid(True)
-  ax.set_xticklabels(['{}'.format(h.strftime('%R')) for h in hours])
-  ax.set_ylabel('Km')
+  ax_.grid(True)
+  ax_.set_xticklabels(['{}'.format(h.strftime('%R')) for h in hours])
+  ax_.set_ylabel('Km')
 
   plt.grid(linestyle='dotted')
   plt.savefig(filename)
   plt.close()
 
-def violinPlot(wspr_data):
+def violin_plot(wspr_data):
   filename = os.path.join(Config.target, 'violin.png')
   logging.info('Drawing violin to %s', filename)
 
@@ -177,45 +173,45 @@ def violinPlot(wspr_data):
     data.append((datetime.utcfromtimestamp(key), reject_outliers(values)))
 
   hours, values = zip(*data)
-  fig, ax = plt.subplots(figsize=Config.fig_size)
+  fig, ax_ = plt.subplots(figsize=Config.fig_size)
   fig.text(.01, .02, 'http://github.com/0x9900/wspr')
 
-  fig.suptitle('[{}] Distances'.format(Config.callsign),  fontsize=14, fontweight='bold')
-  ax.grid(True)
-  ax.set_xticklabels(['{}'.format(h.strftime('%d %R')) for h in hours])
-  ax.set_ylabel('Km')
+  fig.suptitle('[{}] Distances'.format(Config.callsign), fontsize=14, fontweight='bold')
+  ax_.grid(True)
+  ax_.set_xticklabels(['{}'.format(h.strftime('%d %R')) for h in hours])
+  ax_.set_ylabel('Km')
 
-  ax.violinplot(values, showmeans=False, showmedians=True)
+  ax_.violinplot(values, showmeans=False, showmedians=True)
 
   plt.grid(linestyle='dotted')
   plt.savefig(filename)
   plt.close()
 
-def contactMap(wspr_data):
+def contact_map(wspr_data):
   filename = os.path.join(Config.target, 'contactmap.png')
   logging.info('Drawing connection map to %s', filename)
 
-  fig, ax = plt.subplots(figsize=(14, 10))
+  fig = plt.figure(figsize=(14, 10))
   fig.text(0.01, 0.02, 'http://github/com/0x9900/wspr')
   fig.suptitle('[{}] Contact Map'.format(Config.callsign), fontsize=14, fontweight='bold')
 
   slon, slat = grid2latlong(wspr_data[0].tx_grid)
 
   logging.info("lat: %f / lon: %f", slat, slon)
-  map = Basemap(projection='cyl', lon_0=slon, resolution='c')
-  map.fillcontinents(color='linen', lake_color='aqua')
-  map.drawcoastlines()
-  map.drawmapboundary(fill_color='aqua')
-  map.drawparallels(np.arange(-90.,90.,30.))
-  map.drawmeridians(np.arange(-180.,180.,60.))
+  bmap = Basemap(projection='cyl', lon_0=slon, resolution='c')
+  bmap.fillcontinents(color='linen', lake_color='aqua')
+  bmap.drawcoastlines()
+  bmap.drawmapboundary(fill_color='aqua')
+  bmap.drawparallels(np.arange(-90., 90., 30.))
+  bmap.drawmeridians(np.arange(-180., 180., 60.))
 
   # draw great circle route between NY and London
   for data in wspr_data:
     slon, slat = grid2latlong(data.tx_grid)
     dlon, dlat = grid2latlong(data.rx_grid)
-    map.drawgreatcircle(slon, slat, dlon, dlat, linewidth=.5, color='g')
-    x, y = map(dlon, dlat)
-    map.plot(x, y, 'go', markersize=3, alpha=.5)
+    bmap.drawgreatcircle(slon, slat, dlon, dlat, linewidth=.5, color='g')
+    x, y = bmap(dlon, dlat)
+    bmap.plot(x, y, 'go', markersize=3, alpha=.5)
   plt.savefig(filename)
   plt.close()
 
@@ -243,12 +239,12 @@ def main():
   else:
     wspr_data = download()
 
-  boxPlot(wspr_data)
-  violinPlot(wspr_data)
+  box_plot(wspr_data)
+  violin_plot(wspr_data)
   azimuth(wspr_data)
 
   if Basemap:
-    contactMap(wspr_data)
+    contact_map(wspr_data)
   else:
     logging.warning('Install matplotlib.Basemap to generate the maps')
 
