@@ -12,7 +12,9 @@ propagation works or to optimize your antenna setting.
 
 ## Dependencies
 
-This program depends on the following Python packages: `matplotlib`, `numpy`, `requests`. You can also optionally install `mpl_tookints`, if you want to display maps.
+This program depends on the following Python packages: `matplotlib`, `numpy`,
+ `requests`. You can also optionally install `mpl_tookints`, if you want to
+ display maps.
 
 ## Usage
 
@@ -44,11 +46,16 @@ by the site DXplorer.
 
 ## Output example
 
+The most classic graph is the distance where your signal was picked up. This
+following graph shows the 75th percentile if the distance.
+
+![Distances](graphs/distplot.png)
+
 The following boxplot graph show for each day at what distance the
 bulk of your communication was heard. It also shows the distance
 minima and maxima as well as the outliers.
 
-![Distances](graphs/boxplot.png)
+![Distances Boxplot](graphs/boxplot.png)
 
 The violin graph shows how the station hearing your signal are
 distributed in the IQR.

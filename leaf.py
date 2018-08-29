@@ -83,13 +83,22 @@ def download():
   params = dict(callsign=Config.callsign,
                 key=Config.key,
                 timelimit=Config.timelimit)
-  resp = requests.get(url=DXPLORER_URL, params=params)
-  data = resp.json()
+  try:
+    resp = requests.get(url=DXPLORER_URL, params=params)
+    data = resp.json()
+  except Exception as err:
+    logging.error(err)
+    raise
   if 'Error' in data:
     logging.error(data['Error'])
     sys.exit(os.EX_OSFILE)
   logging.info('Downloaded %d records', len(data))
   return [WsprData(**d) for d in data]
+
+def smooth(y, box_pts):
+  box = np.ones(box_pts)/box_pts
+  y_smooth = np.convolve(y, box, mode='full')
+  return y_smooth
 
 def reject_outliers(data, magnitude=1.5):
   q25, q75 = np.percentile(data, [25, 75])
@@ -118,12 +127,36 @@ def azimuth(wspr_data):
 
   fig = plt.figure()
   fig.text(.01, .02, 'http://github.com/0x9900/wspr')
-  fig.suptitle('[{}] Azimuth x Distance'.format(Config.callsign), fontsize=14, fontweight='bold')
+  fig.suptitle('[{}] Azimuth x Distance'.format(Config.callsign),  fontsize=14, fontweight='bold')
+
   ax_ = fig.add_subplot(111, polar=True)
   ax_.set_theta_zero_location("N")
   ax_.set_theta_direction(-1)
-
   ax_.scatter(azim, elems)
+
+  plt.savefig(filename)
+  plt.close()
+
+
+def distPlot(wspr_data):
+  filename = os.path.join(Config.target, 'distplot.png')
+  logging.info('Drawing distplot to %s', filename)
+
+  data = collections.defaultdict(list)
+  for val in wspr_data:
+    key = 300 * (val.timestamp / 300)
+    data[key].append(float(val.distance))
+
+  _, values = zip(*sorted(data.items()))
+  values = smooth([np.percentile(v, 90, interpolation='midpoint') for v in values], 7)
+
+  fig, ax_ = plt.subplots(figsize=Config.fig_size)
+  fig.text(0.01, 0.02, 'http://github.com/0x9900/wspr')
+  fig.suptitle('[{}] Distances'.format(Config.callsign),  fontsize=14, fontweight='bold')
+
+  ax_.plot(values)
+  ax_.grid(True)
+
   plt.savefig(filename)
   plt.close()
 
