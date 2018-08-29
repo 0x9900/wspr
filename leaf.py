@@ -37,9 +37,10 @@ class Config(object):
   target = '/tmp'
   granularity = 5
   fig_size = (16, 6)
-  timelimit = '28h'
+  timelimit = '25h'
   callsign = os.getenv("CALLSIGN", '').upper()
   key = os.getenv("KEY")
+
 
 class WsprData(object):
   # pylint: disable=too-few-public-methods
@@ -49,6 +50,7 @@ class WsprData(object):
   def __init__(self, *_, **kwargs):
     for key, val, in kwargs.items():
       setattr(self, key, val)
+
 
 def grid2latlong(maiden):
   """
@@ -69,6 +71,7 @@ def grid2latlong(maiden):
 
   return lon, lat
 
+
 def readfile(filename):
   try:
     with open(filename, 'rb') as fdi:
@@ -78,6 +81,7 @@ def readfile(filename):
     sys.exit(os.EX_OSFILE)
 
   return [WsprData(**d) for d in data]
+
 
 def download():
   params = dict(callsign=Config.callsign,
@@ -95,10 +99,12 @@ def download():
   logging.info('Downloaded %d records', len(data))
   return [WsprData(**d) for d in data]
 
+
 def smooth(y, box_pts):
   box = np.ones(box_pts)/box_pts
   y_smooth = np.convolve(y, box, mode='full')
   return y_smooth
+
 
 def reject_outliers(data, magnitude=1.5):
   q25, q75 = np.percentile(data, [25, 75])
@@ -108,6 +114,7 @@ def reject_outliers(data, magnitude=1.5):
   qmax = q75 + (iqr * magnitude)
 
   return [x for x in data if qmin <= x <= qmax]
+
 
 def azimuth(wspr_data):
   filename = os.path.join(Config.target, 'azimuth.png')
@@ -126,7 +133,7 @@ def azimuth(wspr_data):
   azim, elems = zip(*elements)
 
   fig = plt.figure()
-  fig.text(.01, .02, 'http://github.com/0x9900/wspr')
+  fig.text(.01, .02, 'http://github.com/0x9900/wspr - Time span: %s' % Config.timelimit)
   fig.suptitle('[{}] Azimuth x Distance'.format(Config.callsign),  fontsize=14, fontweight='bold')
 
   ax_ = fig.add_subplot(111, polar=True)
@@ -138,20 +145,21 @@ def azimuth(wspr_data):
   plt.close()
 
 
-def distPlot(wspr_data):
+def dist_plot(wspr_data):
+  bucket_size = 120
   filename = os.path.join(Config.target, 'distplot.png')
   logging.info('Drawing distplot to %s', filename)
 
   data = collections.defaultdict(list)
   for val in wspr_data:
-    key = 300 * (val.timestamp / 300)
+    key = bucket_size * (val.timestamp / bucket_size)
     data[key].append(float(val.distance))
 
   _, values = zip(*sorted(data.items()))
-  values = smooth([np.percentile(v, 90, interpolation='midpoint') for v in values], 7)
+  values = smooth([np.percentile(v, 90, interpolation='midpoint') for v in values], 5)
 
   fig, ax_ = plt.subplots(figsize=Config.fig_size)
-  fig.text(0.01, 0.02, 'http://github.com/0x9900/wspr')
+  fig.text(.01, .02, 'http://github.com/0x9900/wspr - Time span: %s' % Config.timelimit)
   fig.suptitle('[{}] Distances'.format(Config.callsign),  fontsize=14, fontweight='bold')
 
   ax_.plot(values)
@@ -159,6 +167,7 @@ def distPlot(wspr_data):
 
   plt.savefig(filename)
   plt.close()
+
 
 def box_plot(wspr_data):
   # basic plot
@@ -176,7 +185,7 @@ def box_plot(wspr_data):
 
   hours, values = zip(*data)
   fig, ax_ = plt.subplots(figsize=Config.fig_size)
-  fig.text(0.01, 0.02, 'http://github.com/0x9900/wspr')
+  fig.text(.01, .02, 'http://github.com/0x9900/wspr - Time span: %s' % Config.timelimit)
   fig.suptitle('[{}] Distances'.format(Config.callsign), fontsize=14, fontweight='bold')
 
   bplot = ax_.boxplot(values, sym="b.", patch_artist=True)
@@ -190,6 +199,7 @@ def box_plot(wspr_data):
   plt.grid(linestyle='dotted')
   plt.savefig(filename)
   plt.close()
+
 
 def violin_plot(wspr_data):
   filename = os.path.join(Config.target, 'violin.png')
@@ -207,7 +217,7 @@ def violin_plot(wspr_data):
 
   hours, values = zip(*data)
   fig, ax_ = plt.subplots(figsize=Config.fig_size)
-  fig.text(.01, .02, 'http://github.com/0x9900/wspr')
+  fig.text(.01, .02, 'http://github.com/0x9900/wspr - Time span: %s' % Config.timelimit)
 
   fig.suptitle('[{}] Distances'.format(Config.callsign), fontsize=14, fontweight='bold')
   ax_.grid(True)
@@ -220,12 +230,13 @@ def violin_plot(wspr_data):
   plt.savefig(filename)
   plt.close()
 
+
 def contact_map(wspr_data):
   filename = os.path.join(Config.target, 'contactmap.png')
   logging.info('Drawing connection map to %s', filename)
 
   fig = plt.figure(figsize=(14, 10))
-  fig.text(0.01, 0.02, 'http://github/com/0x9900/wspr')
+  fig.text(.01, .02, 'http://github/com/0x9900/wspr - Time span: %s' % Config.timelimit)
   fig.suptitle('[{}] Contact Map'.format(Config.callsign), fontsize=14, fontweight='bold')
 
   slon, slat = grid2latlong(wspr_data[0].tx_grid)
@@ -247,6 +258,7 @@ def contact_map(wspr_data):
     bmap.plot(x, y, 'go', markersize=3, alpha=.5)
   plt.savefig(filename)
   plt.close()
+
 
 def main():
   parser = argparse.ArgumentParser(description='WSPR Stats.')
@@ -275,6 +287,7 @@ def main():
   box_plot(wspr_data)
   violin_plot(wspr_data)
   azimuth(wspr_data)
+  dist_plot(wspr_data)
 
   if Basemap:
     contact_map(wspr_data)
