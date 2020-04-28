@@ -140,7 +140,7 @@ def azimuth(wspr_data):
 
   fig = plt.figure()
   fig.text(.01, .02, 'http://github.com/0x9900/wspr - Time span: %s' % Config.timelimit)
-  fig.suptitle('[{}] Azimuth x Distance'.format(Config.callsign),  fontsize=14, fontweight='bold')
+  fig.suptitle('[{}] Azimuth x Distance'.format(Config.callsign), fontsize=14, fontweight='bold')
 
   ax_ = fig.add_subplot(111, polar=True)
   ax_.set_theta_zero_location("N")
@@ -166,7 +166,7 @@ def dist_plot(wspr_data):
 
   fig, ax_ = plt.subplots(figsize=Config.fig_size)
   fig.text(.01, .02, 'http://github.com/0x9900/wspr - Time span: %s' % Config.timelimit)
-  fig.suptitle('[{}] Distances'.format(Config.callsign),  fontsize=14, fontweight='bold')
+  fig.suptitle('[{}] Distances'.format(Config.callsign), fontsize=14, fontweight='bold')
 
   ax_.plot(values)
   ax_.grid(True)
