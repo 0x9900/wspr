@@ -37,9 +37,10 @@ class Config(object):
   target = '/tmp'
   granularity = 5
   fig_size = (16, 6)
-  timelimit = '28h'
+  timelimit = '25h'
   callsign = os.getenv("CALLSIGN", '').upper()
   key = os.getenv("KEY")
+
 
 class WsprData(object):
   # pylint: disable=too-few-public-methods
@@ -49,6 +50,7 @@ class WsprData(object):
   def __init__(self, *_, **kwargs):
     for key, val, in kwargs.items():
       setattr(self, key, val)
+
 
 def grid2latlong(maiden):
   """
@@ -69,6 +71,7 @@ def grid2latlong(maiden):
 
   return lon, lat
 
+
 def readfile(filename):
   try:
     with open(filename, 'rb') as fdi:
@@ -79,26 +82,35 @@ def readfile(filename):
 
   return [WsprData(**d) for d in data]
 
-def download():
+
+def download(timelimit, band):
   params = dict(callsign=Config.callsign,
+                band=band,
                 key=Config.key,
-                timelimit=Config.timelimit)
+                timelimit=timelimit)
   try:
     resp = requests.get(url=DXPLORER_URL, params=params)
     data = resp.json()
   except Exception as err:
     logging.error(err)
     raise
+
+  if not data:
+    logging.error('Empty data')
+    sys.exit(os.EX_OSFILE)
   if 'Error' in data:
     logging.error(data['Error'])
     sys.exit(os.EX_OSFILE)
+
   logging.info('Downloaded %d records', len(data))
   return [WsprData(**d) for d in data]
+
 
 def smooth(y, box_pts):
   box = np.ones(box_pts)/box_pts
   y_smooth = np.convolve(y, box, mode='full')
   return y_smooth
+
 
 def reject_outliers(data, magnitude=1.5):
   q25, q75 = np.percentile(data, [25, 75])
@@ -108,6 +120,7 @@ def reject_outliers(data, magnitude=1.5):
   qmax = q75 + (iqr * magnitude)
 
   return [x for x in data if qmin <= x <= qmax]
+
 
 def azimuth(wspr_data):
   filename = os.path.join(Config.target, 'azimuth.png')
@@ -126,8 +139,8 @@ def azimuth(wspr_data):
   azim, elems = zip(*elements)
 
   fig = plt.figure()
-  fig.text(.01, .02, 'http://github.com/0x9900/wspr')
-  fig.suptitle('[{}] Azimuth x Distance'.format(Config.callsign),  fontsize=14, fontweight='bold')
+  fig.text(.01, .02, 'http://github.com/0x9900/wspr - Time span: %s' % Config.timelimit)
+  fig.suptitle('[{}] Azimuth x Distance'.format(Config.callsign), fontsize=14, fontweight='bold')
 
   ax_ = fig.add_subplot(111, polar=True)
   ax_.set_theta_zero_location("N")
@@ -138,27 +151,29 @@ def azimuth(wspr_data):
   plt.close()
 
 
-def distPlot(wspr_data):
+def dist_plot(wspr_data):
+  bucket_size = 120
   filename = os.path.join(Config.target, 'distplot.png')
   logging.info('Drawing distplot to %s', filename)
 
   data = collections.defaultdict(list)
   for val in wspr_data:
-    key = 300 * (val.timestamp / 300)
+    key = bucket_size * (val.timestamp / bucket_size)
     data[key].append(float(val.distance))
 
   _, values = zip(*sorted(data.items()))
-  values = smooth([np.percentile(v, 90, interpolation='midpoint') for v in values], 7)
+  values = smooth([np.percentile(v, 90, interpolation='midpoint') for v in values], 5)
 
   fig, ax_ = plt.subplots(figsize=Config.fig_size)
-  fig.text(0.01, 0.02, 'http://github.com/0x9900/wspr')
-  fig.suptitle('[{}] Distances'.format(Config.callsign),  fontsize=14, fontweight='bold')
+  fig.text(.01, .02, 'http://github.com/0x9900/wspr - Time span: %s' % Config.timelimit)
+  fig.suptitle('[{}] Distances'.format(Config.callsign), fontsize=14, fontweight='bold')
 
   ax_.plot(values)
   ax_.grid(True)
 
   plt.savefig(filename)
   plt.close()
+
 
 def box_plot(wspr_data):
   # basic plot
@@ -176,7 +191,7 @@ def box_plot(wspr_data):
 
   hours, values = zip(*data)
   fig, ax_ = plt.subplots(figsize=Config.fig_size)
-  fig.text(0.01, 0.02, 'http://github.com/0x9900/wspr')
+  fig.text(.01, .02, 'http://github.com/0x9900/wspr - Time span: %s' % Config.timelimit)
   fig.suptitle('[{}] Distances'.format(Config.callsign), fontsize=14, fontweight='bold')
 
   bplot = ax_.boxplot(values, sym="b.", patch_artist=True)
@@ -190,6 +205,7 @@ def box_plot(wspr_data):
   plt.grid(linestyle='dotted')
   plt.savefig(filename)
   plt.close()
+
 
 def violin_plot(wspr_data):
   filename = os.path.join(Config.target, 'violin.png')
@@ -207,7 +223,7 @@ def violin_plot(wspr_data):
 
   hours, values = zip(*data)
   fig, ax_ = plt.subplots(figsize=Config.fig_size)
-  fig.text(.01, .02, 'http://github.com/0x9900/wspr')
+  fig.text(.01, .02, 'http://github.com/0x9900/wspr - Time span: %s' % Config.timelimit)
 
   fig.suptitle('[{}] Distances'.format(Config.callsign), fontsize=14, fontweight='bold')
   ax_.grid(True)
@@ -220,12 +236,13 @@ def violin_plot(wspr_data):
   plt.savefig(filename)
   plt.close()
 
+
 def contact_map(wspr_data):
   filename = os.path.join(Config.target, 'contactmap.png')
   logging.info('Drawing connection map to %s', filename)
 
   fig = plt.figure(figsize=(14, 10))
-  fig.text(0.01, 0.02, 'http://github/com/0x9900/wspr')
+  fig.text(.01, .02, 'http://github/com/0x9900/wspr - Time span: %s' % Config.timelimit)
   fig.suptitle('[{}] Contact Map'.format(Config.callsign), fontsize=14, fontweight='bold')
 
   slon, slat = grid2latlong(wspr_data[0].tx_grid)
@@ -248,16 +265,44 @@ def contact_map(wspr_data):
   plt.savefig(filename)
   plt.close()
 
+
+def type_time(parg):
+  errmsg = '--time: shoud be an integer followed by "H" for hour or "D" for days. Max 40 days.'
+  parg = parg.upper()
+  try:
+    length, unit = float(parg[:-1]), parg[-1:]
+  except ValueError:
+    raise argparse.ArgumentTypeError(errmsg)
+
+  if unit == 'H' and length <= 48:
+    return int(length), unit
+
+  if unit == 'H' and length > 48:
+    length = round(length / 24.0)
+    unit = 'D'
+
+  if unit == 'D' and length < 40:
+    return int(length), unit
+  raise argparse.ArgumentTypeError(errmsg)
+
+
 def main():
   parser = argparse.ArgumentParser(description='WSPR Stats.')
-  parser.add_argument('-d', '--debug', action='store_true', default=False,
+  parser.add_argument('-D', '--debug', action='store_true', default=False,
                       help='Print information useful for debugging')
   parser.add_argument('-t', '--target-dir', default='/tmp',
                       help=('Target directory where the images will be '
                             'saved [default: %(default)s]'))
   parser.add_argument('-f', '--file', help='JSON file from DXPlorer.net')
+  parser.add_argument('-b', '--band', type=int, default=14,
+                      help=('Band to download, in Mhz [default: %(default)s]'))
+  parser.add_argument('-T', '--time', type=type_time, default='24h',
+                      help=('Time: shoud be an integer followed by "H" for hour or '
+                            '"D" for days [default: %(default)s]'))
   pargs = parser.parse_args()
+
   Config.target = pargs.target_dir
+
   if pargs.debug:
     _logger = logging.getLogger()
     _logger.setLevel('DEBUG')
@@ -270,11 +315,12 @@ def main():
   if pargs.file:
     wspr_data = readfile(pargs.file)
   else:
-    wspr_data = download()
+    wspr_data = download('{}{}'.format(*pargs.time), pargs.band)
 
   box_plot(wspr_data)
   violin_plot(wspr_data)
   azimuth(wspr_data)
+  dist_plot(wspr_data)
 
   if Basemap:
     contact_map(wspr_data)
