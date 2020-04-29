@@ -17,6 +17,7 @@ import sys
 from datetime import datetime
 
 import json
+import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
 import requests
@@ -35,9 +36,10 @@ DXPLORER_URL = "http://dxplorer.net/wspr/tx/spots.json"
 class Config(object):
   # pylint: disable=too-few-public-methods
   target = '/tmp'
-  granularity = 5
+  granularity = 8
   fig_size = (16, 6)
-  timelimit = '25h'
+  timelimit = '25H'
+  count = 1000
   callsign = os.getenv("CALLSIGN", '').upper()
   key = os.getenv("KEY")
 
@@ -87,6 +89,7 @@ def download(timelimit, band):
   params = dict(callsign=Config.callsign,
                 band=band,
                 key=Config.key,
+                count=Config.count,
                 timelimit=timelimit)
   try:
     resp = requests.get(url=DXPLORER_URL, params=params)
@@ -106,12 +109,6 @@ def download(timelimit, band):
   return [WsprData(**d) for d in data]
 
 
-def smooth(y, box_pts):
-  box = np.ones(box_pts)/box_pts
-  y_smooth = np.convolve(y, box, mode='full')
-  return y_smooth
-
-
 def reject_outliers(data, magnitude=1.5):
   q25, q75 = np.percentile(data, [25, 75])
   iqr = q75 - q25
@@ -128,15 +125,13 @@ def azimuth(wspr_data):
 
   data = collections.defaultdict(set)
   for node in wspr_data:
-    key = Config.granularity * (node.azimuth / Config.granularity)
+    key = int(node.azimuth/Config.granularity) * Config.granularity
     data[key].add(node.distance)
 
   elements = []
   for azim, dists in data.iteritems():
     for dist in reject_outliers(list(dists)):
       elements.append((azim, dist))
-
-  azim, elems = zip(*elements)
 
   fig = plt.figure()
   fig.text(.01, .02, 'http://github.com/0x9900/wspr - Time span: %s' % Config.timelimit)
@@ -145,35 +140,37 @@ def azimuth(wspr_data):
   ax_ = fig.add_subplot(111, polar=True)
   ax_.set_theta_zero_location("N")
   ax_.set_theta_direction(-1)
-  ax_.scatter(azim, elems)
+  ax_.scatter(*zip(*elements))
 
   plt.savefig(filename)
   plt.close()
 
 
 def dist_plot(wspr_data):
-  bucket_size = 120
   filename = os.path.join(Config.target, 'distplot.png')
   logging.info('Drawing distplot to %s', filename)
 
-  data = collections.defaultdict(list)
+  collection = collections.defaultdict(list)
   for val in wspr_data:
-    key = bucket_size * (val.timestamp / bucket_size)
-    data[key].append(float(val.distance))
+    key = 600 * (val.timestamp / 600)
+    collection[key].append(float(val.distance))
 
-  _, values = zip(*sorted(data.items()))
-  values = smooth([np.percentile(v, 90, interpolation='midpoint') for v in values], 5)
+  data = []
+  for key, values in sorted(collection.items()):
+    data.append((datetime.utcfromtimestamp(key), max(values)))
 
   fig, ax_ = plt.subplots(figsize=Config.fig_size)
   fig.text(.01, .02, 'http://github.com/0x9900/wspr - Time span: %s' % Config.timelimit)
   fig.suptitle('[{}] Distances'.format(Config.callsign), fontsize=14, fontweight='bold')
+  fig.autofmt_xdate()
 
-  ax_.plot(values)
+  ax_.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
   ax_.grid(True)
+  ax_.set_ylabel('Km')
+  ax_.plot(*zip(*data))
 
   plt.savefig(filename)
   plt.close()
-
 
 def box_plot(wspr_data):
   # basic plot
@@ -193,16 +190,18 @@ def box_plot(wspr_data):
   fig, ax_ = plt.subplots(figsize=Config.fig_size)
   fig.text(.01, .02, 'http://github.com/0x9900/wspr - Time span: %s' % Config.timelimit)
   fig.suptitle('[{}] Distances'.format(Config.callsign), fontsize=14, fontweight='bold')
+  fig.autofmt_xdate()
 
-  bplot = ax_.boxplot(values, sym="b.", patch_artist=True)
-  for patch in bplot['boxes']:
-    patch.set(color='lightblue', linewidth=1)
+  labels = ['{}'.format(h.strftime('%R')) for h in hours]
 
   ax_.grid(True)
-  ax_.set_xticklabels(['{}'.format(h.strftime('%R')) for h in hours])
+  ax_.grid(linestyle='dotted')
   ax_.set_ylabel('Km')
 
-  plt.grid(linestyle='dotted')
+  bplot = ax_.boxplot(values, sym="b.", patch_artist=True, autorange=True, labels=labels)
+  for patch in bplot['boxes']:
+    patch.set(color='silver', linewidth=1)
+
   plt.savefig(filename)
   plt.close()
 
@@ -227,7 +226,7 @@ def violin_plot(wspr_data):
 
   fig.suptitle('[{}] Distances'.format(Config.callsign), fontsize=14, fontweight='bold')
   ax_.grid(True)
-  ax_.set_xticklabels(['{}'.format(h.strftime('%d %R')) for h in hours])
+  ax_.set_xticklabels(['{}'.format(h.strftime('%R')) for h in hours])
   ax_.set_ylabel('Km')
 
   ax_.violinplot(values, showmeans=False, showmedians=True)
@@ -241,7 +240,7 @@ def contact_map(wspr_data):
   filename = os.path.join(Config.target, 'contactmap.png')
   logging.info('Drawing connection map to %s', filename)
 
-  fig = plt.figure(figsize=(14, 10))
+  fig = plt.figure(figsize=(10, 10))
   fig.text(.01, .02, 'http://github/com/0x9900/wspr - Time span: %s' % Config.timelimit)
   fig.suptitle('[{}] Contact Map'.format(Config.callsign), fontsize=14, fontweight='bold')
 
@@ -249,19 +248,27 @@ def contact_map(wspr_data):
 
   logging.info("lat: %f / lon: %f", slat, slon)
   bmap = Basemap(projection='cyl', lon_0=slon, resolution='c')
-  bmap.fillcontinents(color='linen', lake_color='aqua')
+  # bmap = Basemap(projection='cyl', lon_0=slon, resolution='c', llcrnrlat=0, urcrnrlat=90,
+  # llcrnrlon=-150, urcrnrlon=-60)
+
+  bmap.fillcontinents(color='silver', lake_color='aqua')
   bmap.drawcoastlines()
   bmap.drawmapboundary(fill_color='aqua')
   bmap.drawparallels(np.arange(-90., 90., 30.))
   bmap.drawmeridians(np.arange(-180., 180., 60.))
 
   # draw great circle route between NY and London
+  _calls = set([])
   for data in wspr_data:
+    if data.rx_call in _calls:
+      continue
+    _calls.add(data.rx_call)
     slon, slat = grid2latlong(data.tx_grid)
     dlon, dlat = grid2latlong(data.rx_grid)
-    bmap.drawgreatcircle(slon, slat, dlon, dlat, linewidth=.5, color='g')
+    bmap.drawgreatcircle(slon, slat, dlon, dlat, linewidth=.25, color='navy')
     x, y = bmap(dlon, dlat)
-    bmap.plot(x, y, 'go', markersize=3, alpha=.5)
+    bmap.plot(x, y, 'go', markersize=3, alpha=.5, color='navy')
+
   plt.savefig(filename)
   plt.close()
 
