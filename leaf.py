@@ -85,12 +85,12 @@ def readfile(filename):
   return [WsprData(**d) for d in data]
 
 
-def download(timelimit, band):
+def download(band):
   params = dict(callsign=Config.callsign,
                 band=band,
                 key=Config.key,
                 count=Config.count,
-                timelimit=timelimit)
+                timelimit=Config.timelimit)
   try:
     resp = requests.get(url=DXPLORER_URL, params=params)
     data = resp.json()
@@ -255,6 +255,8 @@ def contact_map(wspr_data):
 
   logging.info("lat: %f / lon: %f", slat, slon)
   bmap = Basemap(projection='cyl', lon_0=slon, resolution='c')
+  #bmap = Basemap(projection='cyl', lon_0=slon, resolution='c', llcrnrlat=0, urcrnrlat=90,
+  #               llcrnrlon=-150, urcrnrlon=-60)
 
   bmap.fillcontinents(color='silver', lake_color='aqua')
   bmap.drawcoastlines()
@@ -277,27 +279,6 @@ def contact_map(wspr_data):
   plt.savefig(filename)
   plt.close()
 
-
-def type_time(parg):
-  errmsg = '--time: shoud be an integer followed by "H" for hour or "D" for days. Max 40 days.'
-  parg = parg.upper()
-  try:
-    length, unit = float(parg[:-1]), parg[-1:]
-  except ValueError:
-    raise argparse.ArgumentTypeError(errmsg)
-
-  if unit == 'H' and length <= 48:
-    return int(length), unit
-
-  if unit == 'H' and length > 48:
-    length = round(length / 24.0)
-    unit = 'D'
-
-  if unit == 'D' and length < 40:
-    return int(length), unit
-  raise argparse.ArgumentTypeError(errmsg)
-
-
 def main():
   parser = argparse.ArgumentParser(description='WSPR Stats.')
   parser.add_argument('-D', '--debug', action='store_true', default=False,
@@ -308,9 +289,6 @@ def main():
   parser.add_argument('-f', '--file', help='JSON file from DXPlorer.net')
   parser.add_argument('-b', '--band', type=int, default=14,
                       help=('Band to download, in Mhz [default: %(default)s]'))
-  parser.add_argument('-T', '--time', type=type_time, default='24h',
-                      help=('Time: shoud be an integer followed by "H" for hour or '
-                            '"D" for days [default: %(default)s]'))
   pargs = parser.parse_args()
 
   Config.target = pargs.target_dir
@@ -327,7 +305,7 @@ def main():
   if pargs.file:
     wspr_data = readfile(pargs.file)
   else:
-    wspr_data = download('{}{}'.format(*pargs.time), pargs.band)
+    wspr_data = download(pargs.band)
 
   box_plot(wspr_data)
   violin_plot(wspr_data)
