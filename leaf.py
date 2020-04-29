@@ -165,7 +165,8 @@ def dist_plot(wspr_data):
   fig.autofmt_xdate()
 
   ax_.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
-  ax_.grid(True)
+  ax_.grid(True, linestyle='dotted')
+  ax_.set_xlabel('UTC Time')
   ax_.set_ylabel('Km')
   ax_.plot(*zip(*data))
 
@@ -186,16 +187,16 @@ def box_plot(wspr_data):
   for key, values in sorted(collection.items()):
     data.append((datetime.utcfromtimestamp(key), values))
 
-  hours, values = zip(*data)
   fig, ax_ = plt.subplots(figsize=Config.fig_size)
   fig.text(.01, .02, 'http://github.com/0x9900/wspr - Time span: %s' % Config.timelimit)
   fig.suptitle('[{}] Distances'.format(Config.callsign), fontsize=14, fontweight='bold')
   fig.autofmt_xdate()
 
-  labels = ['{}'.format(h.strftime('%R')) for h in hours]
+  labels, values = zip(*data)
+  labels = ['{}'.format(h.strftime('%R')) for h in labels]
 
-  ax_.grid(True)
-  ax_.grid(linestyle='dotted')
+  ax_.grid(True, linestyle='dotted')
+  ax_.set_xlabel('UTC Time')
   ax_.set_ylabel('Km')
 
   bplot = ax_.boxplot(values, sym="b.", patch_artist=True, autorange=True, labels=labels)
@@ -220,18 +221,24 @@ def violin_plot(wspr_data):
   for key, values in sorted(collection.items()):
     data.append((datetime.utcfromtimestamp(key), reject_outliers(values)))
 
-  hours, values = zip(*data)
+  labels, values = zip(*data)
+  labels = ['{}'.format(h.strftime('%R')) for h in labels]
+
   fig, ax_ = plt.subplots(figsize=Config.fig_size)
   fig.text(.01, .02, 'http://github.com/0x9900/wspr - Time span: %s' % Config.timelimit)
-
   fig.suptitle('[{}] Distances'.format(Config.callsign), fontsize=14, fontweight='bold')
-  ax_.grid(True)
-  ax_.set_xticklabels(['{}'.format(h.strftime('%R')) for h in hours])
+
+  ax_.xaxis.set_ticks_position('bottom')
+  ax_.set_xticks(np.arange(1, len(labels) + 1))
+  ax_.set_xticklabels(labels)
+  ax_.set_xlim(0.25, len(labels) + 0.75)
+  ax_.set_xlabel('UTC Time')
+
+  ax_.grid(True, linestyle='dotted')
   ax_.set_ylabel('Km')
 
   ax_.violinplot(values, showmeans=False, showmedians=True)
 
-  plt.grid(linestyle='dotted')
   plt.savefig(filename)
   plt.close()
 
@@ -248,8 +255,6 @@ def contact_map(wspr_data):
 
   logging.info("lat: %f / lon: %f", slat, slon)
   bmap = Basemap(projection='cyl', lon_0=slon, resolution='c')
-  # bmap = Basemap(projection='cyl', lon_0=slon, resolution='c', llcrnrlat=0, urcrnrlat=90,
-  # llcrnrlon=-150, urcrnrlon=-60)
 
   bmap.fillcontinents(color='silver', lake_color='aqua')
   bmap.drawcoastlines()
