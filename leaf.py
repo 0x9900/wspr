@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-"""
+"""To use wspr/leaf.py you need to set 2 environment variables one
+with your call sign the second one with your wspr (dxplorer) key.
 
-To read leaf.py you need to install the following packages:
-- matplotlib
-- numpy
-- requests
+For example:
+$ export CALLSIGN="W6BSD"
+$ export KEY="aGAT9om5wASsmx8CIrH48MB8Dhh"
 
 """
 
@@ -135,7 +135,7 @@ def azimuth(wspr_data):
     data[key].add(node.distance)
 
   elements = []
-  for azim, dists in data.iteritems():
+  for azim, dists in data.items():
     for dist in reject_outliers(list(dists)):
       elements.append((azim, dist))
 
@@ -270,16 +270,16 @@ def contact_map(wspr_data):
 
   logging.info("lat: %f / lon: %f", slat, slon)
   bmap = Basemap(projection='cyl', lon_0=slon, lat_0=slat, resolution='c')
-  # bmap = Basemap(projection='cyl', lon_0=slon, lat_0=slat, resolution='c',
+  # bmap = Basemap(projection='cyl', lon_0=slon, lat_0=slat, resolution='l',
   #                llcrnrlat=0, urcrnrlat=90,
   #                llcrnrlon=-150, urcrnrlon=-60)
+  # bmap.drawstates()
 
-  bmap.drawstates()
   bmap.fillcontinents(color='silver', lake_color='aqua')
   bmap.drawcoastlines()
   bmap.drawmapboundary(fill_color='aqua')
-  bmap.drawparallels(np.arange(-90., 90., 30.))
-  bmap.drawmeridians(np.arange(-180., 180., 60.))
+  bmap.drawparallels(np.arange(-90., 90., 45.))
+  bmap.drawmeridians(np.arange(-180., 180., 45.))
 
   # draw great circle route between NY and London
   _calls = set([])
@@ -298,7 +298,7 @@ def contact_map(wspr_data):
 
 def main():
   """Every good program start with a main function"""
-  parser = argparse.ArgumentParser(description='WSPR Stats.')
+  parser = argparse.ArgumentParser(description='WSPR Stats.', usage=__doc__)
   parser.add_argument('-D', '--debug', action='store_true', default=False,
                       help='Print information useful for debugging')
   parser.add_argument('-t', '--target-dir', default='/tmp',
