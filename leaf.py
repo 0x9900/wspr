@@ -34,6 +34,7 @@ logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s',
 DXPLORER_URL = "http://dxplorer.net/wspr/tx/spots.json"
 
 class Config(object):
+  """Store Configuration and global variables"""
   # pylint: disable=too-few-public-methods
   target = '/tmp'
   granularity = 8
@@ -45,6 +46,7 @@ class Config(object):
 
 
 class WsprData(object):
+  """Structure storing WSPR data"""
   # pylint: disable=too-few-public-methods
   __slot__ = ["distance", "tx_call", "timestamp", "drift", "tx_grid", "rx_call", "power_dbm",
               "rx_grid", "azimuth", "snr", "freq"]
@@ -75,6 +77,7 @@ def grid2latlong(maiden):
 
 
 def readfile(filename):
+  """Read WSPR data file"""
   try:
     with open(filename, 'rb') as fdi:
       data = json.load(fdi)
@@ -86,6 +89,7 @@ def readfile(filename):
 
 
 def download(band):
+  """Download WSPR data from the dxplorer website"""
   params = dict(callsign=Config.callsign,
                 band=band,
                 key=Config.key,
@@ -110,6 +114,7 @@ def download(band):
 
 
 def reject_outliers(data, magnitude=1.5):
+  """Reject the statistical outliers from a list"""
   q25, q75 = np.percentile(data, [25, 75])
   iqr = q75 - q25
 
@@ -120,6 +125,7 @@ def reject_outliers(data, magnitude=1.5):
 
 
 def azimuth(wspr_data):
+  """Display the contacts azimut / distance."""
   filename = os.path.join(Config.target, 'azimuth.png')
   logging.info('Drawing azimuth to %s', filename)
 
@@ -147,6 +153,8 @@ def azimuth(wspr_data):
 
 
 def dist_plot(wspr_data):
+  """Show the maximum distances"""
+
   filename = os.path.join(Config.target, 'distplot.png')
   logging.info('Drawing distplot to %s', filename)
 
@@ -174,7 +182,9 @@ def dist_plot(wspr_data):
   plt.close()
 
 def box_plot(wspr_data):
-  # basic plot
+  """Box plot graph show the median, 75 and 25 percentile of the
+  distance. It also show the outliers."""
+
   filename = os.path.join(Config.target, 'boxplot.png')
   logging.info('Drawing boxplot to %s', filename)
 
@@ -208,6 +218,9 @@ def box_plot(wspr_data):
 
 
 def violin_plot(wspr_data):
+  """After removing the outliers draw violin plot. This graph show where
+  is the highest contact distances probabilities."""
+
   filename = os.path.join(Config.target, 'violin.png')
   logging.info('Drawing violin to %s', filename)
 
@@ -244,6 +257,8 @@ def violin_plot(wspr_data):
 
 
 def contact_map(wspr_data):
+
+  """Show all the contacts on a map"""
   filename = os.path.join(Config.target, 'contactmap.png')
   logging.info('Drawing connection map to %s', filename)
 
@@ -254,10 +269,12 @@ def contact_map(wspr_data):
   slon, slat = grid2latlong(wspr_data[0].tx_grid)
 
   logging.info("lat: %f / lon: %f", slat, slon)
-  bmap = Basemap(projection='cyl', lon_0=slon, resolution='c')
-  #bmap = Basemap(projection='cyl', lon_0=slon, resolution='c', llcrnrlat=0, urcrnrlat=90,
-  #               llcrnrlon=-150, urcrnrlon=-60)
+  bmap = Basemap(projection='cyl', lon_0=slon, lat_0=slat, resolution='c')
+  # bmap = Basemap(projection='cyl', lon_0=slon, lat_0=slat, resolution='c',
+  #                llcrnrlat=0, urcrnrlat=90,
+  #                llcrnrlon=-150, urcrnrlon=-60)
 
+  bmap.drawstates()
   bmap.fillcontinents(color='silver', lake_color='aqua')
   bmap.drawcoastlines()
   bmap.drawmapboundary(fill_color='aqua')
@@ -280,6 +297,7 @@ def contact_map(wspr_data):
   plt.close()
 
 def main():
+  """Every good program start with a main function"""
   parser = argparse.ArgumentParser(description='WSPR Stats.')
   parser.add_argument('-D', '--debug', action='store_true', default=False,
                       help='Print information useful for debugging')
