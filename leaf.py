@@ -1,5 +1,8 @@
 #!/usr/bin/env python
-"""To use wspr/leaf.py you need to set 2 environment variables one
+"""The program leaf.py download the last 24 hours worth of data from
+WSPR net and compute statistical analysis of your contacts.
+
+To use leaf.py you need to set 2 environment variables one
 with your call sign the second one with your wspr (dxplorer) key.
 
 For example:
@@ -33,6 +36,27 @@ logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s',
 
 DXPLORER_URL = "http://dxplorer.net/wspr/tx/spots.json"
 
+DEFAULT_BAND = "20m"
+
+BANDS = collections.OrderedDict((
+  ("160m", 1),
+  ("80m", 3),
+  ("60m", 5),
+  ("40m", 7),
+  ("30m", 10),
+  ("20m", 14),
+  ("17m", 18),
+  ("15m", 21),
+  ("12m", 24),
+  ("10m", 28),
+  ("6m", 50),
+  ("4m", 70),
+  ("2m", 144),
+  ("70cm", 432),
+  ("23cm", 1296),
+))
+
+
 class Config(object):
   """Store Configuration and global variables"""
   # pylint: disable=too-few-public-methods
@@ -40,7 +64,7 @@ class Config(object):
   granularity = 8
   fig_size = (16, 6)
   timelimit = '25H'
-  count = 1000
+  count = 10000
   callsign = os.getenv("CALLSIGN", '').upper()
   key = os.getenv("KEY")
 
@@ -49,11 +73,22 @@ class WsprData(object):
   """Structure storing WSPR data"""
   # pylint: disable=too-few-public-methods
   __slot__ = ["distance", "tx_call", "timestamp", "drift", "tx_grid", "rx_call", "power_dbm",
-              "rx_grid", "azimuth", "snr", "freq"]
+              "rx_grid", "azimuth", "snr", "freq", "rx_lat", "rx_long", "tx_lat", "tx_long"]
 
   def __init__(self, *_, **kwargs):
     for key, val, in kwargs.items():
       setattr(self, key, val)
+      if key == 'tx_grid':
+        lat, lon = grid2latlong(val)
+        setattr(self, 'tx_lat', lat)
+        setattr(self, 'tx_lon', lon)
+      elif key == 'rx_grid':
+        lat, lon = grid2latlong(val)
+        setattr(self, 'rx_lon', lon)
+        setattr(self, 'rx_lat', lat)
+
+  def __repr__(self):
+    return "WsprData: {0.tx_call}/{0.rx_call}, distance: {0.distance}, snr: {0.snr}".format(self)
 
 
 def grid2latlong(maiden):
@@ -73,7 +108,7 @@ def grid2latlong(maiden):
   for idx in range(1, len(maiden), 2):
     lat += maiden[idx] * multipliers[idx]
 
-  return lon, lat
+  return lat, lon
 
 
 def readfile(filename):
@@ -160,7 +195,7 @@ def dist_plot(wspr_data):
 
   collection = collections.defaultdict(list)
   for val in wspr_data:
-    key = 600 * (val.timestamp / 600)
+    key = 60 * (val.timestamp / 60)
     collection[key].append(float(val.distance))
 
   data = []
@@ -180,6 +215,7 @@ def dist_plot(wspr_data):
 
   plt.savefig(filename)
   plt.close()
+
 
 def box_plot(wspr_data):
   """Box plot graph show the median, 75 and 25 percentile of the
@@ -262,39 +298,49 @@ def contact_map(wspr_data):
   filename = os.path.join(Config.target, 'contactmap.png')
   logging.info('Drawing connection map to %s', filename)
 
-  fig = plt.figure(figsize=(10, 10))
+  fig = plt.figure(figsize=(15, 10))
   fig.text(.01, .02, 'http://github/com/0x9900/wspr - Time span: %s' % Config.timelimit)
   fig.suptitle('[{}] Contact Map'.format(Config.callsign), fontsize=14, fontweight='bold')
 
-  slon, slat = grid2latlong(wspr_data[0].tx_grid)
+  __calls = []
+  points = []
+  for data in wspr_data:
+    if data.rx_call in __calls:
+      continue
+    __calls.append(data.rx_call)
+    points.append((data.rx_lon, data.rx_lat))
 
-  logging.info("lat: %f / lon: %f", slat, slon)
-  bmap = Basemap(projection='cyl', lon_0=slon, lat_0=slat, resolution='c')
-  # bmap = Basemap(projection='cyl', lon_0=slon, lat_0=slat, resolution='l',
-  #                llcrnrlat=0, urcrnrlat=90,
-  #                llcrnrlon=-150, urcrnrlon=-60)
-  # bmap.drawstates()
+  points = np.array(points)
+  right, up = points.max(axis=0)
+  left, down = points.min(axis=0)
 
-  bmap.fillcontinents(color='silver', lake_color='aqua')
+  logging.info("Origin lat: %f / lon: %f", wspr_data[0].tx_lat, wspr_data[0].tx_lon)
+  bmap = Basemap(projection='cyl', lon_0=wspr_data[0].tx_lon, lat_0=wspr_data[0].tx_lat, resolution='c',
+                 urcrnrlat=up+5, urcrnrlon=right+15, llcrnrlat=down-15, llcrnrlon=left-5)
+  bmap.drawstates()
+
+  bmap.fillcontinents(color='white', lake_color='aqua')
   bmap.drawcoastlines()
   bmap.drawmapboundary(fill_color='aqua')
   bmap.drawparallels(np.arange(-90., 90., 45.))
   bmap.drawmeridians(np.arange(-180., 180., 45.))
 
-  # draw great circle route between NY and London
-  _calls = set([])
-  for data in wspr_data:
-    if data.rx_call in _calls:
-      continue
-    _calls.add(data.rx_call)
-    slon, slat = grid2latlong(data.tx_grid)
-    dlon, dlat = grid2latlong(data.rx_grid)
-    bmap.drawgreatcircle(slon, slat, dlon, dlat, linewidth=.25, color='navy')
-    x, y = bmap(dlon, dlat)
-    bmap.plot(x, y, 'go', markersize=3, alpha=.5, color='navy')
+  for lon, lat in points:
+    bmap.drawgreatcircle(wspr_data[0].tx_lon, wspr_data[0].tx_lat, lon, lat,
+                         linewidth=.25, color='navy')
+    x, y = bmap(lon, lat)
+    bmap.plot(x, y, 'v', markersize=4, alpha=.5, color='red')
 
   plt.savefig(filename)
   plt.close()
+
+
+def band_select(argument):
+  argument = argument.lower()
+  if argument not in BANDS:
+    raise argparse.ArgumentTypeError("Possible bands are:", ",".join(BANDS))
+  return BANDS[argument]
+
 
 def main():
   """Every good program start with a main function"""
@@ -305,7 +351,7 @@ def main():
                       help=('Target directory where the images will be '
                             'saved [default: %(default)s]'))
   parser.add_argument('-f', '--file', help='JSON file from DXPlorer.net')
-  parser.add_argument('-b', '--band', type=int, default=14,
+  parser.add_argument('-b', '--band', type=band_select, default=DEFAULT_BAND,
                       help=('Band to download, in Mhz [default: %(default)s]'))
   pargs = parser.parse_args()
 
