@@ -65,6 +65,7 @@ class Config(object):
   # pylint: disable=too-few-public-methods
   target = '/tmp'
   granularity = 8
+  percentile = 90
   fig_size = (16, 6)
   timelimit = '25H'
   count = 10000
@@ -205,21 +206,10 @@ def dist_plot(wspr_data):
   filename = os.path.join(Config.target, 'distplot.png')
   logging.info('Drawing distplot to %s', filename)
 
-  fig, ax_ = plt.subplots(figsize=Config.fig_size)
-  fig.text(.01, .02, ('http://github.com/0x9900/wspr - Distance 90th percentile - '
-                      'Time span: %s') % Config.timelimit)
-  fig.suptitle('[{}] Distances'.format(Config.callsign), fontsize=14, fontweight='bold')
-  fig.autofmt_xdate()
-
-  ax_.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
-  ax_.grid(True, linestyle='dotted')
-  ax_.set_xlabel('UTC Time')
-  ax_.set_ylabel('Km')
-
   collection = collections.defaultdict(list)
   for data in wspr_data:
     collection[900 * (data.timestamp / 900)].append(data.distance)
-  collection = {k: np.percentile(v, 90) for k, v in collection.items()}
+  collection = {k: np.percentile(v, Config.percentile) for k, v in collection.items()}
 
   xval, yval = zip(*[(k, v) for k, v in sorted(collection.items())])
   xval = np.array(xval)
@@ -230,7 +220,19 @@ def dist_plot(wspr_data):
   spline = make_interp_spline(xval, yval, k=k_factor)
   smooth = spline(xnew)
 
-  plt.plot([datetime.utcfromtimestamp(x) for x in xnew], smooth)
+  fig, ax_ = plt.subplots(figsize=Config.fig_size)
+  fig.text(.01, .02, ('http://github.com/0x9900/wspr - Distance %sth percentile - '
+                      'Time span: %s') % (Config.percentile, Config.timelimit))
+  fig.suptitle('[{}] Distances'.format(Config.callsign), fontsize=14, fontweight='bold')
+  fig.autofmt_xdate()
+
+  ax_.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+  ax_.grid(True, which="both", linestyle='dotted')
+  ax_.set_xlabel('UTC Time')
+  ax_.set_ylabel('Km')
+  ax_.set_yscale('log')
+  ax_.set_ylim(1, yval.max()+1000)
+  ax_.plot([datetime.utcfromtimestamp(x) for x in xnew], smooth)
 
   plt.savefig(filename)
   plt.close()

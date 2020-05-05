@@ -5,4 +5,4 @@
 /build/
 /dist/
 scratch_pad.py
-misc/W6BSD.json
+misc/*.json
