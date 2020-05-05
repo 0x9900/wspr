@@ -25,6 +25,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import requests
 
+from scipy.interpolate import make_interp_spline, BSpline
+
 try:
   from mpl_toolkits.basemap import Basemap
 except ImportError:
@@ -175,7 +177,8 @@ def azimuth(wspr_data):
       elements.append((azim, dist))
 
   fig = plt.figure()
-  fig.text(.01, .02, 'http://github.com/0x9900/wspr - Time span: %s' % Config.timelimit)
+  fig.text(.01, .02, ('http://github.com/0x9900/wspr - Distance and direction - '
+                      'Time span: %s') % Config.timelimit)
   fig.suptitle('[{}] Azimuth x Distance'.format(Config.callsign), fontsize=14, fontweight='bold')
 
   ax_ = fig.add_subplot(111, polar=True)
@@ -193,17 +196,9 @@ def dist_plot(wspr_data):
   filename = os.path.join(Config.target, 'distplot.png')
   logging.info('Drawing distplot to %s', filename)
 
-  collection = collections.defaultdict(list)
-  for val in wspr_data:
-    key = 60 * (val.timestamp / 60)
-    collection[key].append(float(val.distance))
-
-  data = []
-  for key, values in sorted(collection.items()):
-    data.append((datetime.utcfromtimestamp(key), max(values)))
-
   fig, ax_ = plt.subplots(figsize=Config.fig_size)
-  fig.text(.01, .02, 'http://github.com/0x9900/wspr - Time span: %s' % Config.timelimit)
+  fig.text(.01, .02, ('http://github.com/0x9900/wspr - Distance 90th percentile - '
+                      'Time span: %s') % Config.timelimit)
   fig.suptitle('[{}] Distances'.format(Config.callsign), fontsize=14, fontweight='bold')
   fig.autofmt_xdate()
 
@@ -211,7 +206,21 @@ def dist_plot(wspr_data):
   ax_.grid(True, linestyle='dotted')
   ax_.set_xlabel('UTC Time')
   ax_.set_ylabel('Km')
-  ax_.plot(*zip(*data))
+
+  collection = collections.defaultdict(list)
+  for data in wspr_data:
+    collection[900 * (data.timestamp / 900)].append(data.distance)
+  collection = {k: np.percentile(v, 90) for k, v in collection.items()}
+
+  xval, yval = zip(*[(k, v) for k, v in sorted(collection.items())])
+  xval = np.array(xval)
+  yval = np.array(yval)
+
+  xnew = np.linspace(xval.min(), xval.max(), len(xval) * 10)
+  spline = make_interp_spline(xval, yval, k=3)
+  smooth = spline(xnew)
+
+  plt.plot([datetime.utcfromtimestamp(x) for x in xnew], smooth)
 
   plt.savefig(filename)
   plt.close()
@@ -234,7 +243,8 @@ def box_plot(wspr_data):
     data.append((datetime.utcfromtimestamp(key), values))
 
   fig, ax_ = plt.subplots(figsize=Config.fig_size)
-  fig.text(.01, .02, 'http://github.com/0x9900/wspr - Time span: %s' % Config.timelimit)
+  fig.text(.01, .02, ('http://github.com/0x9900/wspr - Distance quartile range - '
+                      'Time span: %s') % Config.timelimit)
   fig.suptitle('[{}] Distances'.format(Config.callsign), fontsize=14, fontweight='bold')
   fig.autofmt_xdate()
 
@@ -274,7 +284,8 @@ def violin_plot(wspr_data):
   labels = ['{}'.format(h.strftime('%R')) for h in labels]
 
   fig, ax_ = plt.subplots(figsize=Config.fig_size)
-  fig.text(.01, .02, 'http://github.com/0x9900/wspr - Time span: %s' % Config.timelimit)
+  fig.text(.01, .02, ('http://github.com/0x9900/wspr - Distance and contacts density - '
+                      'Time span: %s') % Config.timelimit)
   fig.suptitle('[{}] Distances'.format(Config.callsign), fontsize=14, fontweight='bold')
 
   ax_.xaxis.set_ticks_position('bottom')
@@ -299,7 +310,8 @@ def contact_map(wspr_data):
   logging.info('Drawing connection map to %s', filename)
 
   fig = plt.figure(figsize=(15, 10))
-  fig.text(.01, .02, 'http://github/com/0x9900/wspr - Time span: %s' % Config.timelimit)
+  fig.text(.01, .02, ('http://github/com/0x9900/wspr - Contacts map - '
+                      'Time span: %s') % Config.timelimit)
   fig.suptitle('[{}] Contact Map'.format(Config.callsign), fontsize=14, fontweight='bold')
 
   __calls = []
