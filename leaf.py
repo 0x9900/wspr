@@ -183,7 +183,7 @@ def azimuth(wspr_data):
   for key, cnt in dist_count.items():
     theta.append(key[0])
     distance.append(key[1])
-    density.append(cnt * 2)
+    density.append(cnt * 3)
 
   fig = plt.figure()
   fig.text(.01, .02, ('http://github.com/0x9900/wspr - Distance and direction - '
