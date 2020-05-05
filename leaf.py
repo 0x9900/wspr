@@ -14,6 +14,7 @@ $ export KEY="aGAT9om5wASsmx8CIrH48MB8Dhh"
 import argparse
 import collections
 import logging
+import math
 import os
 import sys
 
@@ -25,7 +26,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import requests
 
-from scipy.interpolate import make_interp_spline, BSpline
+from scipy.interpolate import make_interp_spline
 
 try:
   from mpl_toolkits.basemap import Basemap
@@ -41,21 +42,21 @@ DXPLORER_URL = "http://dxplorer.net/wspr/tx/spots.json"
 DEFAULT_BAND = "20m"
 
 BANDS = collections.OrderedDict((
-  ("160m", 1),
-  ("80m", 3),
-  ("60m", 5),
-  ("40m", 7),
-  ("30m", 10),
-  ("20m", 14),
-  ("17m", 18),
-  ("15m", 21),
-  ("12m", 24),
-  ("10m", 28),
-  ("6m", 50),
-  ("4m", 70),
-  ("2m", 144),
-  ("70cm", 432),
-  ("23cm", 1296),
+    ("160m", 1),
+    ("80m", 3),
+    ("60m", 5),
+    ("40m", 7),
+    ("30m", 10),
+    ("20m", 14),
+    ("17m", 18),
+    ("15m", 21),
+    ("12m", 24),
+    ("10m", 28),
+    ("6m", 50),
+    ("4m", 70),
+    ("2m", 144),
+    ("70cm", 432),
+    ("23cm", 1296),
 ))
 
 
@@ -90,7 +91,8 @@ class WsprData(object):
         setattr(self, 'rx_lat', lat)
 
   def __repr__(self):
-    return "WsprData: {0.tx_call}/{0.rx_call}, distance: {0.distance}, snr: {0.snr}".format(self)
+    pattern = "WsprData: {0.tx_call}/{0.rx_call}, distance: {0.distance}, snr: {0.snr}"
+    return pattern.format(self=self)
 
 
 def grid2latlong(maiden):
@@ -166,25 +168,32 @@ def azimuth(wspr_data):
   filename = os.path.join(Config.target, 'azimuth.png')
   logging.info('Drawing azimuth to %s', filename)
 
-  data = collections.defaultdict(set)
+  data = []
   for node in wspr_data:
-    key = int(node.azimuth/Config.granularity) * Config.granularity
-    data[key].add(node.distance)
+    data.append((math.radians(int(node.azimuth/Config.granularity) * Config.granularity),
+                 (node.distance / 50) * 50))
 
-  elements = []
-  for azim, dists in data.items():
-    for dist in reject_outliers(list(dists)):
-      elements.append((azim, dist))
+  dist_count = collections.defaultdict(int)
+  for elem in data:
+    dist_count[elem] += 1
+
+  theta = []
+  distance = []
+  density = []
+  for key, cnt in dist_count.items():
+    theta.append(key[0])
+    distance.append(key[1])
+    density.append(cnt * 2)
 
   fig = plt.figure()
   fig.text(.01, .02, ('http://github.com/0x9900/wspr - Distance and direction - '
                       'Time span: %s') % Config.timelimit)
   fig.suptitle('[{}] Azimuth x Distance'.format(Config.callsign), fontsize=14, fontweight='bold')
 
-  ax_ = fig.add_subplot(111, polar=True)
+  ax_ = fig.add_subplot(111, projection="polar")
   ax_.set_theta_zero_location("N")
   ax_.set_theta_direction(-1)
-  ax_.scatter(*zip(*elements))
+  ax_.scatter(theta, distance, s=density, c=theta, cmap='PiYG', alpha=0.8)
 
   plt.savefig(filename)
   plt.close()
@@ -304,7 +313,6 @@ def violin_plot(wspr_data):
 
 
 def contact_map(wspr_data):
-
   """Show all the contacts on a map"""
   filename = os.path.join(Config.target, 'contactmap.png')
   logging.info('Drawing connection map to %s', filename)
@@ -323,12 +331,13 @@ def contact_map(wspr_data):
     points.append((data.rx_lon, data.rx_lat))
 
   points = np.array(points)
-  right, up = points.max(axis=0)
+  right, upd = points.max(axis=0)
   left, down = points.min(axis=0)
 
   logging.info("Origin lat: %f / lon: %f", wspr_data[0].tx_lat, wspr_data[0].tx_lon)
-  bmap = Basemap(projection='cyl', lon_0=wspr_data[0].tx_lon, lat_0=wspr_data[0].tx_lat, resolution='c',
-                 urcrnrlat=up+5, urcrnrlon=right+15, llcrnrlat=down-15, llcrnrlon=left-5)
+  bmap = Basemap(projection='cyl', lon_0=wspr_data[0].tx_lon, lat_0=wspr_data[0].tx_lat,
+                 urcrnrlat=upd+5, urcrnrlon=right+15, llcrnrlat=down-15, llcrnrlon=left-5,
+                 resolution='c')
   bmap.drawstates()
 
   bmap.fillcontinents(color='white', lake_color='aqua')
@@ -339,7 +348,7 @@ def contact_map(wspr_data):
 
   for lon, lat in points:
     bmap.drawgreatcircle(wspr_data[0].tx_lon, wspr_data[0].tx_lat, lon, lat,
-                         linewidth=.25, color='navy')
+                         linewidth=.5, color='navy')
     x, y = bmap(lon, lat)
     bmap.plot(x, y, 'v', markersize=4, alpha=.5, color='red')
 
@@ -348,6 +357,7 @@ def contact_map(wspr_data):
 
 
 def band_select(argument):
+  """Select and validate the band passed as argument"""
   argument = argument.lower()
   if argument not in BANDS:
     raise argparse.ArgumentTypeError("Possible bands are:", ",".join(BANDS))
