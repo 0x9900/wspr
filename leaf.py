@@ -91,8 +91,8 @@ class WsprData(object):
         setattr(self, 'rx_lat', lat)
 
   def __repr__(self):
-    pattern = "WsprData: {0.tx_call}/{0.rx_call}, distance: {0.distance}, snr: {0.snr}"
-    return pattern.format(self=self)
+    pattern = "WsprData: {0.tx_call} / {0.rx_call}, distance: {0.distance}, snr: {0.snr}"
+    return pattern.format(self)
 
 
 def grid2latlong(maiden):
@@ -226,7 +226,8 @@ def dist_plot(wspr_data):
   yval = np.array(yval)
 
   xnew = np.linspace(xval.min(), xval.max(), len(xval) * 10)
-  spline = make_interp_spline(xval, yval, k=3)
+  k_factor = 3 if len(xval) > 3 else 1
+  spline = make_interp_spline(xval, yval, k=k_factor)
   smooth = spline(xnew)
 
   plt.plot([datetime.utcfromtimestamp(x) for x in xnew], smooth)
