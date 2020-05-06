@@ -66,8 +66,8 @@ class Config(object):
   target = '/tmp'
   granularity = 8
   percentile = 90
-  fig_size = (16, 6)
-  timelimit = '25H'
+  fig_size = (14, 6)
+  timelimit = '24H'
   count = 10000
   callsign = os.getenv("CALLSIGN", '').upper()
   key = os.getenv("KEY")
@@ -186,7 +186,7 @@ def azimuth(wspr_data):
     distance.append(key[1])
     density.append(cnt * 3)
 
-  fig = plt.figure()
+  fig = plt.figure(figsize=(8, 8))
   fig.text(.01, .02, ('http://github.com/0x9900/wspr - Distance and direction - '
                       'Time span: %s') % Config.timelimit)
   fig.suptitle('[{}] Azimuth x Distance'.format(Config.callsign), fontsize=14, fontweight='bold')
@@ -320,11 +320,6 @@ def contact_map(wspr_data):
   filename = os.path.join(Config.target, 'contactmap.png')
   logging.info('Drawing connection map to %s', filename)
 
-  fig = plt.figure(figsize=(15, 10))
-  fig.text(.01, .02, ('http://github/com/0x9900/wspr - Contacts map - '
-                      'Time span: %s') % Config.timelimit)
-  fig.suptitle('[{}] Contact Map'.format(Config.callsign), fontsize=14, fontweight='bold')
-
   __calls = []
   points = []
   for data in wspr_data:
@@ -336,6 +331,11 @@ def contact_map(wspr_data):
   points = np.array(points)
   right, upd = points.max(axis=0)
   left, down = points.min(axis=0)
+
+  fig = plt.figure(figsize=(12, 8))
+  fig.text(.01, .02, ('http://github/com/0x9900/wspr - Contacts map - '
+                      'Time span: %s') % Config.timelimit)
+  fig.suptitle('[{}] Contact Map'.format(Config.callsign), fontsize=14, fontweight='bold')
 
   logging.info("Origin lat: %f / lon: %f", wspr_data[0].tx_lat, wspr_data[0].tx_lon)
   bmap = Basemap(projection='cyl', lon_0=wspr_data[0].tx_lon, lat_0=wspr_data[0].tx_lat,
