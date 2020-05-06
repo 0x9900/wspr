@@ -216,7 +216,7 @@ def dist_plot(wspr_data):
   yval = np.array(yval)
 
   xnew = np.linspace(xval.min(), xval.max(), len(xval) * 10)
-  k_factor = 3 if len(xval) > 3 else 1
+  k_factor = 5 if len(xval) > 10 else 1
   spline = make_interp_spline(xval, yval, k=k_factor)
   smooth = spline(xnew)
 
@@ -231,7 +231,7 @@ def dist_plot(wspr_data):
   ax_.set_xlabel('UTC Time')
   ax_.set_ylabel('Km')
   ax_.set_yscale('log')
-  ax_.set_ylim(1, yval.max()+1000)
+  ax_.set_ylim(yval.min() / 2, yval.max()+1000)
   ax_.plot([datetime.utcfromtimestamp(x) for x in xnew], smooth)
 
   plt.savefig(filename)
