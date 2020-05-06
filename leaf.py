@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-"""The program leaf.py download the last 24 hours worth of data from
-WSPR net and compute statistical analysis of your contacts.
+"""The program leaf.py download the last 24 hours worth of data from WSPR
+net and compute statistical analysis of your contacts.
 
 To use leaf.py you need to set 2 environment variables one
 with your call sign the second one with your wspr (dxplorer) key.
@@ -67,8 +67,8 @@ class Config(object):
   granularity = 8
   percentile = 90
   fig_size = (14, 6)
-  timelimit = '24H'
   count = 10000
+  timespan = 24
   callsign = os.getenv("CALLSIGN", '').upper()
   key = os.getenv("KEY")
 
@@ -134,7 +134,7 @@ def download(band):
                 band=band,
                 key=Config.key,
                 count=Config.count,
-                timelimit=Config.timelimit)
+                timelimit="24H")
   try:
     resp = requests.get(url=DXPLORER_URL, params=params)
     data = resp.json()
@@ -188,7 +188,7 @@ def azimuth(wspr_data):
 
   fig = plt.figure(figsize=(8, 8))
   fig.text(.01, .02, ('http://github.com/0x9900/wspr - Distance and direction - '
-                      'Time span: %s') % Config.timelimit)
+                      'Time span: %sH') % Config.timespan)
   fig.suptitle('[{}] Azimuth x Distance'.format(Config.callsign), fontsize=14, fontweight='bold')
 
   ax_ = fig.add_subplot(111, projection="polar")
@@ -222,7 +222,7 @@ def dist_plot(wspr_data):
 
   fig, ax_ = plt.subplots(figsize=Config.fig_size)
   fig.text(.01, .02, ('http://github.com/0x9900/wspr - Distance %sth percentile - '
-                      'Time span: %s') % (Config.percentile, Config.timelimit))
+                      'Time span: %sH') % (Config.percentile, Config.timespan))
   fig.suptitle('[{}] Distances'.format(Config.callsign), fontsize=14, fontweight='bold')
   fig.autofmt_xdate()
 
@@ -256,7 +256,7 @@ def box_plot(wspr_data):
 
   fig, ax_ = plt.subplots(figsize=Config.fig_size)
   fig.text(.01, .02, ('http://github.com/0x9900/wspr - Distance quartile range - '
-                      'Time span: %s') % Config.timelimit)
+                      'Time span: %sH') % Config.timespan)
   fig.suptitle('[{}] Distances'.format(Config.callsign), fontsize=14, fontweight='bold')
   fig.autofmt_xdate()
 
@@ -297,7 +297,7 @@ def violin_plot(wspr_data):
 
   fig, ax_ = plt.subplots(figsize=Config.fig_size)
   fig.text(.01, .02, ('http://github.com/0x9900/wspr - Distance and contacts density - '
-                      'Time span: %s') % Config.timelimit)
+                      'Time span: %sH') % Config.timespan)
   fig.suptitle('[{}] Distances'.format(Config.callsign), fontsize=14, fontweight='bold')
 
   ax_.xaxis.set_ticks_position('bottom')
@@ -334,7 +334,7 @@ def contact_map(wspr_data):
 
   fig = plt.figure(figsize=(12, 8))
   fig.text(.01, .02, ('http://github/com/0x9900/wspr - Contacts map - '
-                      'Time span: %s') % Config.timelimit)
+                      'Time span: %sH') % Config.timespan)
   fig.suptitle('[{}] Contact Map'.format(Config.callsign), fontsize=14, fontweight='bold')
 
   logging.info("Origin lat: %f / lon: %f", wspr_data[0].tx_lat, wspr_data[0].tx_lon)
@@ -396,15 +396,20 @@ def main():
   else:
     wspr_data = download(pargs.band)
 
-  box_plot(wspr_data)
-  violin_plot(wspr_data)
-  azimuth(wspr_data)
-  dist_plot(wspr_data)
+  timespan = np.array([datetime.utcfromtimestamp(w.timestamp) for w in wspr_data])
+  Config.timespan  = np.timedelta64(timespan.max() - timespan.min(), 'h').astype(int)
 
-  if Basemap:
-    contact_map(wspr_data)
-  else:
-    logging.warning('Install matplotlib.Basemap to generate the maps')
+  try:
+    box_plot(wspr_data)
+    violin_plot(wspr_data)
+    azimuth(wspr_data)
+    dist_plot(wspr_data)
+    if Basemap:
+      contact_map(wspr_data)
+  except ValueError as err:
+    logging.error(err)
+    logging.error('Your dataset is to small. Run WSPR for a longer time and gather more data')
+    sys.exit(os.EX_DATAERR)
 
 if __name__ == "__main__":
   main()
