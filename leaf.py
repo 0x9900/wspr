@@ -83,11 +83,11 @@ class WsprData(object):
     for key, val, in kwargs.items():
       setattr(self, key, val)
       if key == 'tx_grid':
-        lat, lon = grid2latlong(val)
+        lat, lon = grid2latlon(val)
         setattr(self, 'tx_lat', lat)
         setattr(self, 'tx_lon', lon)
       elif key == 'rx_grid':
-        lat, lon = grid2latlong(val)
+        lat, lon = grid2latlon(val)
         setattr(self, 'rx_lon', lon)
         setattr(self, 'rx_lat', lat)
 
@@ -95,23 +95,32 @@ class WsprData(object):
     pattern = "WsprData: {0.tx_call} / {0.rx_call}, distance: {0.distance}, snr: {0.snr}"
     return pattern.format(self)
 
-
-def grid2latlong(maiden):
+def grid2latlon(maiden):
   """
   Transform a maidenhead grid locator to latitude & longitude
   """
-  maiden = maiden.strip().upper()
-  assert len(maiden) in [2, 4, 6, 8], 'Locator length error: 2, 4, 6 or 8 char_acters accepted'
-  char_a = ord('A')
+  assert isinstance(maiden, basestring), "Maidenhead locator has to be a string"
 
-  multipliers = [20, 10, 2, 1, 5./60, 2.5/60, 5./600, 2.5/600]
-  maiden = [ord(n) - char_a if n >= 'A' else int(n) for n in maiden]
-  lon = -180.
-  lat = -90.
-  for idx in range(0, len(maiden), 2):
-    lon += maiden[idx] * multipliers[idx]
-  for idx in range(1, len(maiden), 2):
-    lat += maiden[idx] * multipliers[idx]
+  maiden = maiden.strip().upper()
+  maiden_lg = len(maiden)
+  assert len(maiden) in [2, 4, 6, 8], 'Locator length error: 2, 4, 6 or 8 characters accepted'
+
+  char_a = ord("A")
+  lon = -180.0
+  lat = -90.0
+
+  lon += (ord(maiden[0]) - char_a) * 20
+  lat += (ord(maiden[1]) - char_a) * 10
+
+  if maiden_lg >= 4:
+    lon += int(maiden[2]) * 2
+    lat += int(maiden[3]) * 1
+  if maiden_lg >= 6:
+    lon += (ord(maiden[4]) - char_a) * 5.0 / 60
+    lat += (ord(maiden[5]) - char_a) * 2.5 / 60
+  if maiden_lg >= 8:
+    lon += int(maiden[6]) * 5.0 / 600
+    lat += int(maiden[7]) * 2.5 / 600
 
   return lat, lon
 
