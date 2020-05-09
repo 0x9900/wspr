@@ -350,11 +350,8 @@ def contact_map(wspr_data):
   bmap = Basemap(projection='cyl', lon_0=wspr_data[0].tx_lon, lat_0=wspr_data[0].tx_lat,
                  urcrnrlat=upd+5, urcrnrlon=right+15, llcrnrlat=down-15, llcrnrlon=left-5,
                  resolution='c')
-  bmap.drawstates()
-
-  bmap.fillcontinents(color='white', lake_color='aqua')
-  bmap.drawcoastlines()
-  bmap.drawmapboundary(fill_color='aqua')
+  bmap.drawlsmask(land_color = "#ddaa66", ocean_color="#7777ff", resolution = 'l')
+  bmap.drawcoastlines(color="#707070")
   bmap.drawparallels(np.arange(-90., 90., 45.))
   bmap.drawmeridians(np.arange(-180., 180., 45.))
 
