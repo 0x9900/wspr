@@ -19,7 +19,6 @@ import os
 import sys
 
 from datetime import datetime
-from dateutil import tz
 
 import json
 import matplotlib.dates as mdates
@@ -354,8 +353,7 @@ def contact_map(wspr_data):
   bmap = Basemap(projection='cyl', lon_0=wspr_data[0].tx_lon, lat_0=wspr_data[0].tx_lat,
                  urcrnrlat=upd+5, urcrnrlon=right+15, llcrnrlat=down-15, llcrnrlon=left-5,
                  resolution='c')
-  bmap.drawlsmask(land_color = "#ddaa66", ocean_color="#7777ff", resolution = 'l')
-  bmap.drawcoastlines(color="#707070")
+  bmap.drawlsmask(land_color="#ddaa66", ocean_color="#7777ff", resolution='l')
   bmap.drawparallels(np.arange(-90., 90., 45.))
   bmap.drawmeridians(np.arange(-180., 180., 45.))
 
@@ -409,7 +407,7 @@ def main():
     wspr_data = download()
 
   timespan = np.array([datetime.utcfromtimestamp(w.timestamp) for w in wspr_data])
-  Config.timespan  = np.timedelta64(timespan.max() - timespan.min(), 'h').astype(int)
+  Config.timespan = np.timedelta64(timespan.max() - timespan.min(), 'h').astype(int)
 
   try:
     box_plot(wspr_data)
