@@ -71,6 +71,8 @@ class Config(object):
   timespan = 24
   callsign = os.getenv("CALLSIGN", '').upper()
   key = os.getenv("KEY")
+  band = 14
+  file = None
 
 
 class WsprData(object):
@@ -94,6 +96,7 @@ class WsprData(object):
   def __repr__(self):
     pattern = "WsprData: {0.tx_call} / {0.rx_call}, distance: {0.distance}, snr: {0.snr}"
     return pattern.format(self)
+
 
 def grid2latlon(maiden):
   """
@@ -125,10 +128,10 @@ def grid2latlon(maiden):
   return lat, lon
 
 
-def readfile(filename):
+def readfile():
   """Read WSPR data file"""
   try:
-    with open(filename, 'rb') as fdi:
+    with open(Config.file, 'rb') as fdi:
       data = json.load(fdi)
   except (ValueError, IOError) as err:
     logging.error(err)
@@ -137,10 +140,10 @@ def readfile(filename):
   return [WsprData(**d) for d in data]
 
 
-def download(band):
+def download():
   """Download WSPR data from the dxplorer website"""
   params = dict(callsign=Config.callsign,
-                band=band,
+                band=BANDS[Config.band],
                 key=Config.key,
                 count=Config.count,
                 timelimit="24H")
@@ -196,8 +199,8 @@ def azimuth(wspr_data):
     density.append(cnt * 3)
 
   fig = plt.figure(figsize=(8, 8))
-  fig.text(.01, .02, ('http://github.com/0x9900/wspr - Distance and direction - '
-                      'Time span: %sH') % Config.timespan)
+  fig.text(.01, .02, ('http://github.com/0x9900/wspr - Distance & direction - '
+                      'Time span: %sH - Band: %s') % (Config.timespan, Config.band))
   fig.suptitle('[{}] Azimuth x Distance'.format(Config.callsign), fontsize=14, fontweight='bold')
 
   ax_ = fig.add_subplot(111, projection="polar")
@@ -230,8 +233,8 @@ def dist_plot(wspr_data):
   smooth = spline(xnew)
 
   fig, ax_ = plt.subplots(figsize=Config.fig_size)
-  fig.text(.01, .02, ('http://github.com/0x9900/wspr - Distance %sth percentile - '
-                      'Time span: %sH') % (Config.percentile, Config.timespan))
+  fig.text(.01, .02, ('http://github.com/0x9900/wspr - Distance %sth percentile - Time span: '
+                      '%sH - Band: %s') % (Config.percentile, Config.timespan, Config.band))
   fig.suptitle('[{}] Distances'.format(Config.callsign), fontsize=14, fontweight='bold')
   fig.autofmt_xdate()
 
@@ -265,7 +268,7 @@ def box_plot(wspr_data):
 
   fig, ax_ = plt.subplots(figsize=Config.fig_size)
   fig.text(.01, .02, ('http://github.com/0x9900/wspr - Distance quartile range - '
-                      'Time span: %sH') % Config.timespan)
+                      'Time span: %sH - Band: %s') % (Config.timespan, Config.band))
   fig.suptitle('[{}] Distances'.format(Config.callsign), fontsize=14, fontweight='bold')
   fig.autofmt_xdate()
 
@@ -306,7 +309,7 @@ def violin_plot(wspr_data):
 
   fig, ax_ = plt.subplots(figsize=Config.fig_size)
   fig.text(.01, .02, ('http://github.com/0x9900/wspr - Distance and contacts density - '
-                      'Time span: %sH') % Config.timespan)
+                      'Time span: %sH - Band: %s') % (Config.timespan, Config.band))
   fig.suptitle('[{}] Distances'.format(Config.callsign), fontsize=14, fontweight='bold')
 
   ax_.xaxis.set_ticks_position('bottom')
@@ -343,15 +346,14 @@ def contact_map(wspr_data):
 
   fig = plt.figure(figsize=(12, 8))
   fig.text(.01, .02, ('http://github/com/0x9900/wspr - Contacts map - '
-                      'Time span: %sH') % Config.timespan)
+                      'Time span: %sH - Band: %s') % (Config.timespan, Config.band))
   fig.suptitle('[{}] Contact Map'.format(Config.callsign), fontsize=14, fontweight='bold')
 
   logging.info("Origin lat: %f / lon: %f", wspr_data[0].tx_lat, wspr_data[0].tx_lon)
   bmap = Basemap(projection='cyl', lon_0=wspr_data[0].tx_lon, lat_0=wspr_data[0].tx_lat,
                  urcrnrlat=upd+5, urcrnrlon=right+15, llcrnrlat=down-15, llcrnrlon=left-5,
                  resolution='c')
-  bmap.drawlsmask(land_color = "#ddaa66", ocean_color="#7777ff", resolution = 'l')
-  bmap.drawcoastlines(color="#707070")
+  bmap.drawlsmask(land_color="#ddaa66", ocean_color="#7777ff", resolution='l')
   bmap.drawparallels(np.arange(-90., 90., 45.))
   bmap.drawmeridians(np.arange(-180., 180., 45.))
 
@@ -370,7 +372,7 @@ def band_select(argument):
   argument = argument.lower()
   if argument not in BANDS:
     raise argparse.ArgumentTypeError("Possible bands are:", ",".join(BANDS))
-  return BANDS[argument]
+  return argument
 
 
 def main():
@@ -387,6 +389,8 @@ def main():
   pargs = parser.parse_args()
 
   Config.target = pargs.target_dir
+  Config.band = pargs.band
+  Config.filename = pargs.file
 
   if pargs.debug:
     _logger = logging.getLogger()
@@ -398,12 +402,12 @@ def main():
     sys.exit(os.EX_NOPERM)
 
   if pargs.file:
-    wspr_data = readfile(pargs.file)
+    wspr_data = readfile()
   else:
-    wspr_data = download(pargs.band)
+    wspr_data = download()
 
   timespan = np.array([datetime.utcfromtimestamp(w.timestamp) for w in wspr_data])
-  Config.timespan  = np.timedelta64(timespan.max() - timespan.min(), 'h').astype(int)
+  Config.timespan = np.timedelta64(timespan.max() - timespan.min(), 'h').astype(int)
 
   try:
     box_plot(wspr_data)
