@@ -165,7 +165,7 @@ def download():
   return [WsprData(**d) for d in data]
 
 
-def reject_outliers(data, magnitude=1.5):
+def reject_outliers(data, magnitude=1.75):
   """Reject the statistical outliers from a list"""
   q25, q75 = np.percentile(data, [25, 75])
   iqr = q75 - q25
@@ -361,8 +361,11 @@ def contact_map(wspr_data):
     points.append((data.rx_lon, data.rx_lat))
 
   points = np.array(points)
-  right, upd = points.max(axis=0)
-  left, down = points.min(axis=0)
+  right, upl = points.max(axis=0) + [15., 10.]
+  left, downl = points.min(axis=0) + [-15., -10]
+
+  if right > 180 or left < -180:
+    right, left, upl, downl = (180., -180., 90., -90.)
 
   fig = plt.figure(figsize=(12, 8))
   fig.text(.01, .02, ('http://github/com/0x9900/wspr - Contacts map - '
@@ -370,9 +373,8 @@ def contact_map(wspr_data):
   fig.suptitle('[{}] WSPR Stats'.format(Config.callsign), fontsize=14, fontweight='bold')
 
   logging.info("Origin lat: %f / lon: %f", wspr_data[0].tx_lat, wspr_data[0].tx_lon)
-  bmap = Basemap(projection='cyl', lon_0=wspr_data[0].tx_lon, lat_0=wspr_data[0].tx_lat,
-                 urcrnrlat=upd+5, urcrnrlon=right+15, llcrnrlat=down-15, llcrnrlon=left-5,
-                 resolution='c')
+  bmap = Basemap(projection='cyl', lon_0=wspr_data[0].tx_lon, lat_0=wspr_data[0].tx_lat, resolution='c',
+                 urcrnrlat=upl, urcrnrlon=right, llcrnrlat=downl, llcrnrlon=left)
   bmap.drawlsmask(land_color="#ddaa66", ocean_color="#7777ff", resolution='l')
   bmap.drawparallels(np.arange(-90., 90., 45.))
   bmap.drawmeridians(np.arange(-180., 180., 45.))
