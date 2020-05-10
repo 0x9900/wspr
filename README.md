@@ -51,6 +51,8 @@ following graph shows the 75th percentile if the distance.
 
 ![Distances](graphs/distplot.png)
 
+-----
+
 The following boxplot graph show for each day at what distance the
 bulk of your communication was heard. It also shows the distance
 minima and maxima as well as the outliers.
