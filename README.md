@@ -46,37 +46,47 @@ by the site DXplorer.
 
 ## Output example
 
-The most classic graph is the distance where your signal was picked up. This
-following graph shows the 75th percentile if the distance.
+The most classic graph is the maximum distance where your signal was picked up.
+This following graph shows the 90th percentile if the distance.
 
 ![Distances](graphs/distplot.png)
 
 -----
 
-The following boxplot graph show for each day at what distance the
+The following box plot graph show for each hour at what distance the
 bulk of your communication was heard. It also shows the distance
-minima and maxima as well as the outliers.
+minima, maxima and the outliers.
 
 ![Distances Boxplot](graphs/boxplot.png)
 
+-----
+
 The violin graph shows how the station hearing your signal are
-distributed in the IQR.
+distributed in the IQR[^1].
 
 ![Distribution](graphs/violin.png)
 
+-----
+
 This histogram graph show at what distance your contacts are made. The
-absence of low number of contact indicate the skip zones.
+absence or low number of contact indicate the skip zones.
 
 ![Skip Zones](graphs/skipplot.png)
 
-The azimuth graph shows what direction will show if your signal has
-been heard more in a specific direction.
+-----
+
+The azimuth graph shows what distance / direction your signal has been
+heard.
 
 ![Azimuth](graphs/azimuth.png)
 
-Contact map.
+-----
+
+Pinpoint on a map all your contacts.
 
 ![ContactMap](graphs/contactmap.png)
+
+-----
 
 ## WSPRLite
 
@@ -86,3 +96,6 @@ Worldwide network of receiving stations.
 ![WSPR Picture](misc/wspr.jpg)
 
 -- Fred C / [W6BSD](http://www.qrz.com/db/W6BSD) --
+
+
+[^1]: Interquartile range
