@@ -62,7 +62,7 @@ minima, maxima and the outliers.
 -----
 
 The violin graph shows how the station hearing your signal are
-distributed in the IQR[^1].
+distributed in the IQR (Interquartile range).
 
 ![Distribution](graphs/violin.png)
 
@@ -96,6 +96,3 @@ Worldwide network of receiving stations.
 ![WSPR Picture](misc/wspr.jpg)
 
 -- Fred C / [W6BSD](http://www.qrz.com/db/W6BSD) --
-
-
-[^1]: Interquartile range
