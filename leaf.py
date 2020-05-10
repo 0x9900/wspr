@@ -201,7 +201,7 @@ def azimuth(wspr_data):
   fig = plt.figure(figsize=(8, 8))
   fig.text(.01, .02, ('http://github.com/0x9900/wspr - Distance & direction - '
                       'Time span: %sH - Band: %s') % (Config.timespan, Config.band))
-  fig.suptitle('[{}] Azimuth x Distance'.format(Config.callsign), fontsize=14, fontweight='bold')
+  fig.suptitle('[{}] WSPR Stats'.format(Config.callsign), fontsize=14, fontweight='bold')
 
   ax_ = fig.add_subplot(111, projection="polar")
   ax_.set_theta_zero_location("N")
@@ -211,12 +211,32 @@ def azimuth(wspr_data):
   plt.savefig(filename)
   plt.close()
 
+def skip_plot(wspr_data):
+  """Show the skip zones"""
+
+  filename = os.path.join(Config.target, 'skipplot.png')
+  logging.info('Drawing skip_plot to %s', filename)
+
+  data = np.array([d.distance for d in wspr_data])
+
+  fig, ax_ = plt.subplots(figsize=Config.fig_size)
+  fig.text(.01, .02, ('http://github.com/0x9900/wspr - Skip zones - Time span: '
+                      '%sH - Band: %s') % (Config.timespan, Config.band))
+  fig.suptitle('[{}] WSPR Stats'.format(Config.callsign), fontsize=14, fontweight='bold')
+
+  ax_.set_xlabel('Distances in Km')
+  ax_.set_ylabel('Contacts')
+  ax_.hist(data, bins="auto", alpha=0.9, rwidth=0.95)
+
+  plt.savefig(filename)
+  plt.close()
+
 
 def dist_plot(wspr_data):
   """Show the maximum distances"""
 
   filename = os.path.join(Config.target, 'distplot.png')
-  logging.info('Drawing distplot to %s', filename)
+  logging.info('Drawing dist_plot to %s', filename)
 
   collection = collections.defaultdict(list)
   for data in wspr_data:
@@ -235,7 +255,7 @@ def dist_plot(wspr_data):
   fig, ax_ = plt.subplots(figsize=Config.fig_size)
   fig.text(.01, .02, ('http://github.com/0x9900/wspr - Distance %sth percentile - Time span: '
                       '%sH - Band: %s') % (Config.percentile, Config.timespan, Config.band))
-  fig.suptitle('[{}] Distances'.format(Config.callsign), fontsize=14, fontweight='bold')
+  fig.suptitle('[{}] WSPR Stats'.format(Config.callsign), fontsize=14, fontweight='bold')
   fig.autofmt_xdate()
 
   ax_.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
@@ -255,7 +275,7 @@ def box_plot(wspr_data):
   distance. It also show the outliers."""
 
   filename = os.path.join(Config.target, 'boxplot.png')
-  logging.info('Drawing boxplot to %s', filename)
+  logging.info('Drawing box_plot to %s', filename)
 
   collection = collections.defaultdict(list)
   for val in wspr_data:
@@ -269,7 +289,7 @@ def box_plot(wspr_data):
   fig, ax_ = plt.subplots(figsize=Config.fig_size)
   fig.text(.01, .02, ('http://github.com/0x9900/wspr - Distance quartile range - '
                       'Time span: %sH - Band: %s') % (Config.timespan, Config.band))
-  fig.suptitle('[{}] Distances'.format(Config.callsign), fontsize=14, fontweight='bold')
+  fig.suptitle('[{}] WSPR Stats'.format(Config.callsign), fontsize=14, fontweight='bold')
   fig.autofmt_xdate()
 
   labels, values = zip(*data)
@@ -310,7 +330,7 @@ def violin_plot(wspr_data):
   fig, ax_ = plt.subplots(figsize=Config.fig_size)
   fig.text(.01, .02, ('http://github.com/0x9900/wspr - Distance and contacts density - '
                       'Time span: %sH - Band: %s') % (Config.timespan, Config.band))
-  fig.suptitle('[{}] Distances'.format(Config.callsign), fontsize=14, fontweight='bold')
+  fig.suptitle('[{}] WSPR Stats'.format(Config.callsign), fontsize=14, fontweight='bold')
 
   ax_.xaxis.set_ticks_position('bottom')
   ax_.set_xticks(np.arange(1, len(labels) + 1))
@@ -347,7 +367,7 @@ def contact_map(wspr_data):
   fig = plt.figure(figsize=(12, 8))
   fig.text(.01, .02, ('http://github/com/0x9900/wspr - Contacts map - '
                       'Time span: %sH - Band: %s') % (Config.timespan, Config.band))
-  fig.suptitle('[{}] Contact Map'.format(Config.callsign), fontsize=14, fontweight='bold')
+  fig.suptitle('[{}] WSPR Stats'.format(Config.callsign), fontsize=14, fontweight='bold')
 
   logging.info("Origin lat: %f / lon: %f", wspr_data[0].tx_lat, wspr_data[0].tx_lon)
   bmap = Basemap(projection='cyl', lon_0=wspr_data[0].tx_lon, lat_0=wspr_data[0].tx_lat,
@@ -414,6 +434,7 @@ def main():
     violin_plot(wspr_data)
     azimuth(wspr_data)
     dist_plot(wspr_data)
+    skip_plot(wspr_data)
     if Basemap:
       contact_map(wspr_data)
   except ValueError as err:

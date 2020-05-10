@@ -62,6 +62,11 @@ distributed in the IQR.
 
 ![Distribution](graphs/violin.png)
 
+This histogram graph show at what distance your contacts are made. The
+absence of low number of contact indicate the skip zones.
+
+![Skip Zones](graph/skipplot.png)
+
 The azimuth graph shows what direction will show if your signal has
 been heard more in a specific direction.
 
