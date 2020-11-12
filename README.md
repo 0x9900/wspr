@@ -95,4 +95,9 @@ Worldwide network of receiving stations.
 
 ![WSPR Picture](misc/wspr.jpg)
 
+## Thanks
+
+Thanks to Paul Simon (W6EXT) for the Saturday morning coffee discussions on statistics and the best ways to interpret the WSPR data.
+
+
 -- Fred C / [W6BSD](http://www.qrz.com/db/W6BSD) --

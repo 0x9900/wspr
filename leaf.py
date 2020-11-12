@@ -165,7 +165,7 @@ def download():
   return [WsprData(**d) for d in data]
 
 
-def reject_outliers(data, magnitude=1.75):
+def reject_outliers(data, magnitude=1.8):
   """Reject the statistical outliers from a list"""
   q25, q75 = np.percentile(data, [25, 75])
   iqr = q75 - q25
