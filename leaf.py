@@ -396,13 +396,20 @@ def band_select(argument):
     raise argparse.ArgumentTypeError("Possible bands are:", ",".join(BANDS))
   return argument
 
+def type_directory(parg):
+  path = os.path.expanduser(parg)
+  if not os.path.isdir(path):
+    print('"{}" is not a directory'.format(path))
+    sys.exit(os.EX_OSERR)
+  return path
+
 
 def main():
   """Every good program start with a main function"""
   parser = argparse.ArgumentParser(description='WSPR Stats.', usage=__doc__)
   parser.add_argument('-D', '--debug', action='store_true', default=False,
                       help='Print information useful for debugging')
-  parser.add_argument('-t', '--target-dir', default='/tmp',
+  parser.add_argument('-t', '--target-dir', default='/tmp', type=type_directory,
                       help=('Target directory where the images will be '
                             'saved [default: %(default)s]'))
   parser.add_argument('-f', '--file', help='JSON file from DXPlorer.net')
