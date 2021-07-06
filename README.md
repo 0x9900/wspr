@@ -99,5 +99,10 @@ Worldwide network of receiving stations.
 
 Thanks to Paul Simon (W6EXT) for the Saturday morning coffee discussions on statistics and the best ways to interpret the WSPR data.
 
+For more informations please check this blog posts: [80-meter NVIS antenna][1]
 
--- Fred C / [W6BSD](http://www.qrz.com/db/W6BSD) --
+-- Fred C / [W6BSD][2] --
+
+
+[1]: https://0x9900.com/80-meter-nvis-antenna/
+[2]: http://www.qrz.com/db/W6BSD
