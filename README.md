@@ -29,20 +29,33 @@ results. You can also call `leaf.py` with the argument `--file`. The
 file needs to be a JSON file with the same format as the file provided
 by the site DXplorer.
 
+
+
     wspr$ export CALLSIGN="W6BSD"
   	wspr$ export KEY="xxxxxSECRET_KEYxxxxx"
   	wspr$ ./leaf.py --help
-    usage: leaf.py [-h] [-d] [-t TARGET_DIR] [-f FILE]
+    usage: The program leaf.py download the last 24 hours worth of data from WSPR
+    net and compute statistical analysis of your contacts.
+
+    To use leaf.py you need to set 2 environment variables one
+    with your call sign the second one with your wspr (dxplorer) key.
+
+    For example:
+    $ export CALLSIGN="W6BSD"
+    $ export KEY="aGAT9om5wASsmx8CIrH48MB8Dhh"
 
     WSPR Stats.
 
     optional arguments:
       -h, --help            show this help message and exit
-      -d, --debug           Print information useful for debugging
+      -D, --debug           Print information useful for debugging
       -t TARGET_DIR, --target-dir TARGET_DIR
                             Target directory where the images will be saved
                             [default: /tmp]
       -f FILE, --file FILE  JSON file from DXPlorer.net
+      -b BAND, --band BAND  Band to download, in Mhz [default: 20m]
+
+
 
 ## Output example
 
