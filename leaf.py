@@ -60,7 +60,7 @@ BANDS = collections.OrderedDict((
 ))
 
 
-class Config(object):
+class Config:
   """Store Configuration and global variables"""
   # pylint: disable=too-few-public-methods
   target = '/tmp'
@@ -75,7 +75,7 @@ class Config(object):
   file = None
 
 
-class WsprData(object):
+class WsprData:
   """Structure storing WSPR data"""
   # pylint: disable=too-few-public-methods
   __slot__ = ["distance", "tx_call", "timestamp", "drift", "tx_grid", "rx_call", "power_dbm",
@@ -279,8 +279,8 @@ def box_plot(wspr_data):
 
   collection = collections.defaultdict(list)
   for val in wspr_data:
-    key = 3600 * (val.timestamp / 3600)
-    collection[key].append(val.distance)
+    date_hour = datetime.fromtimestamp(val.timestamp).replace(minute=0, second=0, microsecond=0)
+    collection[date_hour.timestamp()].append(val.distance)
 
   data = []
   for key, values in sorted(collection.items()):
@@ -317,8 +317,8 @@ def violin_plot(wspr_data):
   # get only the relevant data and reject the outliers
   collection = collections.defaultdict(list)
   for val in wspr_data:
-    key = 3600 * (val.timestamp / 3600)
-    collection[key].append(val.distance)
+    date_hour = datetime.fromtimestamp(val.timestamp).replace(minute=0, second=0, microsecond=0)
+    collection[date_hour.timestamp()].append(val.distance)
 
   data = []
   for key, values in sorted(collection.items()):
@@ -373,12 +373,16 @@ def contact_map(wspr_data):
   fig.suptitle('[{}] WSPR Stats'.format(Config.callsign), fontsize=14, fontweight='bold')
 
   logging.info("Origin lat: %f / lon: %f", wspr_data[0].tx_lat, wspr_data[0].tx_lon)
-  bmap = Basemap(projection='cyl', lon_0=wspr_data[0].tx_lon, lat_0=wspr_data[0].tx_lat, resolution='c',
-                 urcrnrlat=upl, urcrnrlon=right, llcrnrlat=downl, llcrnrlon=left)
+  bmap = Basemap(projection='mill', lon_0=wspr_data[0].tx_lon, lat_0=wspr_data[0].tx_lat,
+                 urcrnrlat=upl, urcrnrlon=right, llcrnrlat=downl, llcrnrlon=left,
+                 resolution='c')
 
-  bmap.drawlsmask(land_color="#5C4033", ocean_color="#9999ff", resolution='l')
+  bmap.drawlsmask(land_color="#5c4033", ocean_color="#9999ff", resolution='l')
   bmap.drawparallels(np.arange(-90., 90., 45.))
   bmap.drawmeridians(np.arange(-180., 180., 45.))
+  bmap.drawcountries()
+  bmap.drawstates(linestyle='dashed', color='#777777')
+  #bmap.drawrivers(linestyle='dotted', color='#7777ff')
 
   for lon, lat in points:
     bmap.drawgreatcircle(wspr_data[0].tx_lon, wspr_data[0].tx_lat, lon, lat,
@@ -398,6 +402,7 @@ def band_select(argument):
   return argument
 
 def type_directory(parg):
+  """Check expand the argument then check if it is a directory"""
   path = os.path.expanduser(parg)
   if not os.path.isdir(path):
     print('"{}" is not a directory'.format(path))
