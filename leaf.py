@@ -102,7 +102,7 @@ def grid2latlon(maiden):
   """
   Transform a maidenhead grid locator to latitude & longitude
   """
-  assert isinstance(maiden, basestring), "Maidenhead locator has to be a string"
+  assert isinstance(maiden, str), "Maidenhead locator has to be a string"
 
   maiden = maiden.strip().upper()
   maiden_lg = len(maiden)
@@ -375,15 +375,16 @@ def contact_map(wspr_data):
   logging.info("Origin lat: %f / lon: %f", wspr_data[0].tx_lat, wspr_data[0].tx_lon)
   bmap = Basemap(projection='cyl', lon_0=wspr_data[0].tx_lon, lat_0=wspr_data[0].tx_lat, resolution='c',
                  urcrnrlat=upl, urcrnrlon=right, llcrnrlat=downl, llcrnrlon=left)
-  bmap.drawlsmask(land_color="#ddaa66", ocean_color="#7777ff", resolution='l')
+
+  bmap.drawlsmask(land_color="#5C4033", ocean_color="#9999ff", resolution='l')
   bmap.drawparallels(np.arange(-90., 90., 45.))
   bmap.drawmeridians(np.arange(-180., 180., 45.))
 
   for lon, lat in points:
     bmap.drawgreatcircle(wspr_data[0].tx_lon, wspr_data[0].tx_lat, lon, lat,
-                         linewidth=.5, color='navy')
+                         linewidth=.5, color='navy', del_s=10)
     x, y = bmap(lon, lat)
-    bmap.plot(x, y, 'v', markersize=4, alpha=.5, color='red')
+    bmap.plot(x, y, '*', markersize=4, alpha=.5, color='yellow')
 
   plt.savefig(filename)
   plt.close()
