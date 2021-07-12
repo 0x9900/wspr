@@ -18,7 +18,7 @@ import math
 import os
 import sys
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import json
 import matplotlib.dates as mdates
@@ -240,10 +240,14 @@ def dist_plot(wspr_data):
 
   collection = collections.defaultdict(list)
   for data in wspr_data:
-    collection[900 * (data.timestamp / 900)].append(data.distance)
+    date_hour = datetime.fromtimestamp(data.timestamp).replace(second=0, microsecond=0)
+    date_hour += timedelta(minutes=5)
+    date_hour -= timedelta(minutes=date_hour.minute % 10)
+    collection[date_hour.timestamp()].append(data.distance)
+
   collection = {k: np.percentile(v, Config.percentile) for k, v in collection.items()}
 
-  xval, yval = zip(*[(k, v) for k, v in sorted(collection.items())])
+  xval, yval = zip(*sorted(collection.items()))
   xval = np.array(xval)
   yval = np.array(yval)
 
@@ -263,7 +267,8 @@ def dist_plot(wspr_data):
   ax_.set_xlabel('UTC Time')
   ax_.set_ylabel('Km')
   ax_.set_yscale('log')
-  ax_.set_ylim(1+yval.min()/100, yval.max()+1000)
+  ylim_val = int(yval.min()/3)
+  ax_.set_ylim(ylim_val if ylim_val > 0 else 1 , yval.max()+1000)
   ax_.plot([datetime.utcfromtimestamp(x) for x in xnew], smooth)
 
   plt.savefig(filename)
@@ -279,12 +284,10 @@ def box_plot(wspr_data):
 
   collection = collections.defaultdict(list)
   for val in wspr_data:
-    date_hour = datetime.fromtimestamp(val.timestamp).replace(minute=0, second=0, microsecond=0)
-    collection[date_hour.timestamp()].append(val.distance)
+    date_hour = datetime.utcfromtimestamp(val.timestamp).replace(minute=0, second=0, microsecond=0)
+    collection[date_hour].append(val.distance)
 
-  data = []
-  for key, values in sorted(collection.items()):
-    data.append((datetime.utcfromtimestamp(key), values))
+  data = sorted(collection.items())
 
   fig, ax_ = plt.subplots(figsize=Config.fig_size)
   fig.text(.01, .02, ('http://github.com/0x9900/wspr - Distance quartile range - '
@@ -317,12 +320,12 @@ def violin_plot(wspr_data):
   # get only the relevant data and reject the outliers
   collection = collections.defaultdict(list)
   for val in wspr_data:
-    date_hour = datetime.fromtimestamp(val.timestamp).replace(minute=0, second=0, microsecond=0)
-    collection[date_hour.timestamp()].append(val.distance)
+    date_hour = datetime.utcfromtimestamp(val.timestamp).replace(minute=0, second=0, microsecond=0)
+    collection[date_hour].append(val.distance)
 
   data = []
   for key, values in sorted(collection.items()):
-    data.append((datetime.utcfromtimestamp(key), reject_outliers(values)))
+    data.append((key, reject_outliers(values)))
 
   labels, values = zip(*data)
   labels = ['{}'.format(h.strftime('%R')) for h in labels]
