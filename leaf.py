@@ -199,8 +199,7 @@ def azimuth(wspr_data):
     density.append(cnt * 3)
 
   fig = plt.figure(figsize=(8, 8))
-  fig.text(.01, .02, ('http://github.com/0x9900/wspr - Distance & direction - '
-                      'Time span: %sH - Band: %s') % (Config.timespan, Config.band))
+  fig.text(.01, .02, ('http://github.com/0x9900/wspr - Distance & direction'))
   fig.suptitle('[{}] WSPR Stats'.format(Config.callsign), fontsize=14, fontweight='bold')
 
   ax_ = fig.add_subplot(111, projection="polar")
@@ -220,8 +219,7 @@ def skip_plot(wspr_data):
   data = np.array([d.distance for d in wspr_data])
 
   fig, ax_ = plt.subplots(figsize=Config.fig_size)
-  fig.text(.01, .02, ('http://github.com/0x9900/wspr - Skip zones - Time span: '
-                      '%sH - Band: %s') % (Config.timespan, Config.band))
+  fig.text(.01, .02, ('http://github.com/0x9900/wspr - Skip distance'))
   fig.suptitle('[{}] WSPR Stats'.format(Config.callsign), fontsize=14, fontweight='bold')
 
   ax_.set_xlabel('Distances in Km')
@@ -257,8 +255,7 @@ def dist_plot(wspr_data):
   smooth = spline(xnew)
 
   fig, ax_ = plt.subplots(figsize=Config.fig_size)
-  fig.text(.01, .02, ('http://github.com/0x9900/wspr - Distance %sth percentile - Time span: '
-                      '%sH - Band: %s') % (Config.percentile, Config.timespan, Config.band))
+  fig.text(.01, .02, ('http://github.com/0x9900/wspr - Distance %sth percentile') % Config.percentile)
   fig.suptitle('[{}] WSPR Stats'.format(Config.callsign), fontsize=14, fontweight='bold')
   fig.autofmt_xdate()
 
@@ -290,8 +287,7 @@ def box_plot(wspr_data):
   data = sorted(collection.items())
 
   fig, ax_ = plt.subplots(figsize=Config.fig_size)
-  fig.text(.01, .02, ('http://github.com/0x9900/wspr - Distance quartile range - '
-                      'Time span: %sH - Band: %s') % (Config.timespan, Config.band))
+  fig.text(.01, .02, ('http://github.com/0x9900/wspr - Distance quartile range'))
   fig.suptitle('[{}] WSPR Stats'.format(Config.callsign), fontsize=14, fontweight='bold')
   fig.autofmt_xdate()
 
@@ -331,8 +327,7 @@ def violin_plot(wspr_data):
   labels = ['{}'.format(h.strftime('%R')) for h in labels]
 
   fig, ax_ = plt.subplots(figsize=Config.fig_size)
-  fig.text(.01, .02, ('http://github.com/0x9900/wspr - Distance and contacts density - '
-                      'Time span: %sH - Band: %s') % (Config.timespan, Config.band))
+  fig.text(.01, .02, ('http://github.com/0x9900/wspr - Distance and contacts density'))
   fig.suptitle('[{}] WSPR Stats'.format(Config.callsign), fontsize=14, fontweight='bold')
 
   ax_.xaxis.set_ticks_position('bottom')
@@ -371,8 +366,7 @@ def contact_map(wspr_data):
     right, left, upl, downl = (180., -180., 90., -90.)
 
   fig = plt.figure(figsize=(12, 8))
-  fig.text(.01, .02, ('http://github/com/0x9900/wspr - Contacts map - '
-                      'Time span: %sH - Band: %s') % (Config.timespan, Config.band))
+  fig.text(.01, .02, ('http://github/com/0x9900/wspr - Contacts map'))
   fig.suptitle('[{}] WSPR Stats'.format(Config.callsign), fontsize=14, fontweight='bold')
 
   logging.info("Origin lat: %f / lon: %f", wspr_data[0].tx_lat, wspr_data[0].tx_lon)
