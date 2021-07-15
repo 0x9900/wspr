@@ -389,7 +389,7 @@ def contact_map(wspr_data):
 
   for lon, lat in points:
     bmap.drawgreatcircle(wspr_data[0].tx_lon, wspr_data[0].tx_lat, lon, lat,
-                         linewidth=.5, color='navy', del_s=10)
+                         linewidth=.5, color='navy', del_s=1)
     x, y = bmap(lon, lat)
     bmap.plot(x, y, '*', markersize=4, alpha=.5, color='yellow')
 
